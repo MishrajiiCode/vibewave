@@ -5,6 +5,7 @@
 .pub-cache/
 .pub/
 build/
+*.apk
 
 # Android
 android/local.properties

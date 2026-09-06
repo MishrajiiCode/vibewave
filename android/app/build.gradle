@@ -43,7 +43,7 @@ android {
 
     defaultConfig {
         applicationId "com.vibewave.music"
-        minSdk 21
+        minSdk 23
         targetSdk flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
@@ -64,7 +64,6 @@ flutter {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation platform("com.google.firebase:firebase-bom:33.0.0")
     implementation "com.google.firebase:firebase-analytics"
     implementation "com.google.firebase:firebase-messaging"
