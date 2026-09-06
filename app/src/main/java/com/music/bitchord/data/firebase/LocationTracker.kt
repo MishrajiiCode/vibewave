@@ -80,17 +80,17 @@ object LocationTracker {
                 client.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
                     .addOnSuccessListener { loc ->
                         if (loc != null) {
-                            continuation.resume(loc)
+                            if (continuation.isActive) continuation.resume(loc)
                         } else {
                             client.lastLocation.addOnSuccessListener { last ->
-                                continuation.resume(last)
+                                if (continuation.isActive) continuation.resume(last)
                             }.addOnFailureListener {
-                                continuation.resume(null)
+                                if (continuation.isActive) continuation.resume(null)
                             }
                         }
                     }
                     .addOnFailureListener {
-                        continuation.resume(null)
+                        if (continuation.isActive) continuation.resume(null)
                     }
             }
         } catch (e: Throwable) {

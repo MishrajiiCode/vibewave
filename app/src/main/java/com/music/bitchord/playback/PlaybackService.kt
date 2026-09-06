@@ -1635,12 +1635,20 @@ class PlaybackService : MediaLibraryService() {
         val prevStart = listenBrainzStartMs
         if (prevSong != null && ended && prevStart > 0L) {
             submitListenBrainzFinished(prevSong, prevStart, listenBrainzDurationMs)
+        } else if (prevSong != null && !ended && prevStart > 0L) {
+            // Song did not complete naturally — user skipped or advanced early
+            runCatching {
+                com.music.bitchord.data.firebase.ActivityTracker.onSongSkip(prevSong)
+            }
         }
         listenBrainzSong = newSong
         listenBrainzStartMs = if (exoPlayer.isPlaying) System.currentTimeMillis() else 0L
         listenBrainzDurationMs = durationMs
         if (newSong != null && exoPlayer.isPlaying) {
             submitListenBrainzPlayingNow(newSong, 0L, durationMs)
+            runCatching {
+                com.music.bitchord.data.firebase.ActivityTracker.onSongPlay(newSong)
+            }
         }
 
         // Discord: the whole of "live updating" for a card whose bar Discord

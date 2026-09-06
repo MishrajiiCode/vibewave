@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "721351757303",
-    "project_id": "streamhub-yt-app",
-    "storage_bucket": "streamhub-yt-app.firebasestorage.app"
+    "project_number": "661588271983",
+    "project_id": "music-ba5e9",
+    "storage_bucket": "music-ba5e9.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:721351757303:android:55068e358631d13b79b2f2",
+        "mobilesdk_app_id": "1:661588271983:android:5d7fc6d0033b547635be9a",
         "android_client_info": {
           "package_name": "com.vibewave.music"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBSyy8cIsYdMPjT-AdqxYtwAN7Qx97A_T0"
+          "current_key": "AIzaSyBhZSAq1LjVI5oqnK3RxxaML2a_ZMQTaqE"
         }
       ],
       "services": {

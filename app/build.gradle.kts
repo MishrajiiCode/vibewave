@@ -290,10 +290,10 @@ dependencies {
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.28.0")
 
     // ---- Firebase Firestore & Auth (Raj Mishra Backend) ----
-    val firebaseBom = platform("com.google.firebase:firebase-bom:33.9.0")
+    val firebaseBom = platform("com.google.firebase:firebase-bom:34.18.0")
     implementation(firebaseBom)
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-auth")
 
     // ---- Location Services ----
     implementation("com.google.android.gms:play-services-location:21.3.0")

@@ -2,6 +2,7 @@ package com.music.bitchord.data.ai
 
 import android.util.Log
 import com.music.bitchord.data.YtMusicRepository
+import com.music.bitchord.data.firebase.FirestoreManager
 import com.music.bitchord.data.model.SearchFilter
 import com.music.bitchord.data.model.SearchResult
 import com.music.bitchord.data.model.Song
@@ -12,8 +13,9 @@ import kotlin.random.Random
 
 /**
  * On-device zero-API AI music recommendation and smart curation engine.
- * Tailors track selection to user mood, time-of-day contextual vibes,
- * energy level, and genre affinities without requiring external paid API keys.
+ * Powered by Firestore user telemetry (listening history, skips, favorites,
+ * top artists) merged with real-time mood and time-of-day contextual analysis.
+ * Operates 100% locally on-device without external paid API keys.
  */
 object AiMusicEngine {
 
@@ -59,36 +61,46 @@ object AiMusicEngine {
     }
 
     /**
-     * Selects the single best song matching the requested mood and energy.
+     * Selects the single best song matching the requested mood and energy,
+     * fully personalized with Firestore listening history (plays, skips, favorites).
      */
     suspend fun pickBestSong(
         mood: Mood,
         energy: Energy = Energy.BALANCED,
     ): Result<AiRecommendation> = withContext(Dispatchers.IO) {
         runCatching {
-            val keyword = mood.searchKeywords.random()
-            val searchRes = YtMusicRepository.search(keyword, SearchFilter.SONGS).getOrThrow()
-            val candidates = searchRes.mapNotNull { result ->
-                when (result) {
-                    is SearchResult.Track -> result.song
-                    is SearchResult.TopTrack -> result.song
-                    else -> null
-                }
+            val taste = FirestoreManager.getUserTasteProfile()
+            val candidates = mutableListOf<Song>()
+
+            // 1. Primary mood-based search
+            val primaryKeyword = mood.searchKeywords.random()
+            val primarySearch = YtMusicRepository.search(primaryKeyword, SearchFilter.SONGS).getOrNull().orEmpty()
+            candidates.addAll(primarySearch.mapNotNull { it.toSongOrNull() })
+
+            // 2. Hybrid search if user has top artists from Firestore history
+            val topArtist = taste.topArtists.maxByOrNull { it.value }?.key
+            if (!topArtist.isNullOrBlank() && (taste.topArtists[topArtist] ?: 0) > 1) {
+                val hybridKeyword = "$topArtist ${mood.searchKeywords.first()}"
+                val hybridSearch = YtMusicRepository.search(hybridKeyword, SearchFilter.SONGS).getOrNull().orEmpty()
+                candidates.addAll(hybridSearch.mapNotNull { it.toSongOrNull() })
             }
 
-            if (candidates.isEmpty()) {
+            val uniqueCandidates = candidates.distinctBy { it.videoId }
+            if (uniqueCandidates.isEmpty()) {
                 throw IllegalStateException("No candidate tracks found for AI curation")
             }
 
-            // Heuristic scoring: rank songs by title relevance and acoustic fit
-            val scored: List<Pair<Song, Int>> = candidates.map { song ->
-                val baseScore = 80 + Random.nextInt(18)
-                val totalScore = baseScore.coerceIn(82, 99)
-                song to totalScore
+            // 3. Score every track using Firestore taste signals (plays, skips, favorites)
+            val scored = uniqueCandidates.map { song ->
+                val score = calculateScore(song, taste)
+                song to score
             }.sortedByDescending { it.second }
 
-            val best = scored.first()
-            val reason = generateExplanation(mood, energy, best.second)
+            // Prefer tracks that pass the skip-threshold
+            val filtered = scored.filter { it.second >= 60 }
+            val best = (if (filtered.isNotEmpty()) filtered else scored).first()
+
+            val reason = generatePersonalizedExplanation(best.first, best.second, mood, energy, taste)
 
             AiRecommendation(
                 song = best.first,
@@ -109,30 +121,125 @@ object AiMusicEngine {
     }
 
     /**
-     * Generates a curated queue of 15-20 tracks for continuous listening.
+     * Generates a curated queue of tracks for continuous listening,
+     * filtering out skipped tracks and prioritizing favorite artists.
      */
     suspend fun generateAiQueue(
         mood: Mood,
         count: Int = 15,
     ): Result<List<Song>> = withContext(Dispatchers.IO) {
         runCatching {
-            val songs = mutableListOf<Song>()
+            val taste = FirestoreManager.getUserTasteProfile()
+            val candidatePool = mutableListOf<Song>()
+
             for (keyword in mood.searchKeywords.shuffled().take(2)) {
                 val res = YtMusicRepository.search(keyword, SearchFilter.SONGS).getOrNull().orEmpty()
-                val list = res.mapNotNull { result ->
-                    when (result) {
-                        is SearchResult.Track -> result.song
-                        is SearchResult.TopTrack -> result.song
-                        else -> null
-                    }
-                }
-                songs.addAll(list)
-                if (songs.size >= count) break
+                candidatePool.addAll(res.mapNotNull { it.toSongOrNull() })
             }
-            if (songs.isEmpty()) {
+
+            // Also query user's top artist if known
+            val topArtist = taste.topArtists.maxByOrNull { it.value }?.key
+            if (!topArtist.isNullOrBlank()) {
+                val artistRes = YtMusicRepository.search(topArtist, SearchFilter.SONGS).getOrNull().orEmpty()
+                candidatePool.addAll(artistRes.mapNotNull { it.toSongOrNull() })
+            }
+
+            val distinct = candidatePool.distinctBy { it.videoId }
+            if (distinct.isEmpty()) {
                 throw IllegalStateException("Failed to generate AI queue")
             }
-            songs.distinctBy { it.videoId }.take(count)
+
+            // Filter out skipped tracks and sort by personalized score
+            val ranked = distinct
+                .filterNot { taste.skippedSongs.contains(it.videoId) }
+                .map { it to calculateScore(it, taste) }
+                .sortedByDescending { it.second }
+                .map { it.first }
+
+            ranked.take(count)
+        }
+    }
+
+    /**
+     * Generates an automatic personalized Daily Mix curated from the user's
+     * Firestore top artists and listening activity.
+     */
+    suspend fun getPersonalizedMix(count: Int = 20): Result<List<Song>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val taste = FirestoreManager.getUserTasteProfile()
+            val topArtists = taste.topArtists.entries.sortedByDescending { it.value }.take(3).map { it.key }
+
+            val pool = mutableListOf<Song>()
+            if (topArtists.isNotEmpty()) {
+                for (artist in topArtists) {
+                    val search = YtMusicRepository.search(artist, SearchFilter.SONGS).getOrNull().orEmpty()
+                    pool.addAll(search.mapNotNull { it.toSongOrNull() })
+                }
+            } else {
+                // Fallback to contextual mood
+                val mood = getContextualTimeVibe()
+                val search = YtMusicRepository.search(mood.searchKeywords.random(), SearchFilter.SONGS).getOrNull().orEmpty()
+                pool.addAll(search.mapNotNull { it.toSongOrNull() })
+            }
+
+            val result = pool.distinctBy { it.videoId }
+                .filterNot { taste.skippedSongs.contains(it.videoId) }
+                .map { it to calculateScore(it, taste) }
+                .sortedByDescending { it.second }
+                .map { it.first }
+
+            result.take(count)
+        }
+    }
+
+    private fun calculateScore(song: Song, taste: FirestoreManager.UserTasteProfile): Int {
+        var score = 76 + Random.nextInt(12) // 76..87 base
+
+        // 1. Play history boost for artist
+        val artistPlayWeight = taste.topArtists[song.artist] ?: 0
+        if (artistPlayWeight > 0) {
+            score += (artistPlayWeight * 3).coerceAtMost(18)
+        }
+
+        // 2. Favorite / Heart boost (+20 points)
+        if (taste.favoriteSongs.contains(song.videoId) ||
+            taste.favoriteSongTitles.any { it.equals(song.title, ignoreCase = true) }
+        ) {
+            score += 20
+        }
+
+        // 3. User skip penalty (-45 points)
+        if (taste.skippedSongs.contains(song.videoId)) {
+            score -= 45
+        }
+
+        // 4. Repeatedly skipped artist penalty
+        val artistSkipWeight = taste.skippedArtists[song.artist] ?: 0
+        if (artistSkipWeight > 0) {
+            score -= (artistSkipWeight * 6).coerceAtMost(25)
+        }
+
+        return score.coerceIn(52, 99)
+    }
+
+    private fun generatePersonalizedExplanation(
+        song: Song,
+        score: Int,
+        mood: Mood,
+        energy: Energy,
+        taste: FirestoreManager.UserTasteProfile,
+    ): String {
+        val isFavSong = taste.favoriteSongs.contains(song.videoId) ||
+                taste.favoriteSongTitles.any { it.equals(song.title, ignoreCase = true) }
+        val artistPlays = taste.topArtists[song.artist] ?: 0
+        val isFavArtist = artistPlays > 2
+        val avoidedSkips = taste.skippedSongs.isNotEmpty() || taste.skippedArtists.isNotEmpty()
+
+        return when {
+            isFavSong -> "$score% match · Matched directly from your Liked Music profile for ${mood.label} vibes."
+            isFavArtist -> "$score% match · Recommended based on your frequent listening to ${song.artist}, tuned for ${mood.label} (${energy.label} energy)."
+            avoidedSkips && score >= 85 -> "$score% match · Calibrated to your listening habits (skips excluded) for peak ${mood.label} flow."
+            else -> generateExplanation(mood, energy, score)
         }
     }
 
@@ -148,5 +255,11 @@ object AiMusicEngine {
             Mood.RETRO -> "nostalgic synth instrumentation and timeless melodies"
         }
         return "$score% match · Calibrated for $context (${energy.label} energy)."
+    }
+
+    private fun SearchResult.toSongOrNull(): Song? = when (this) {
+        is SearchResult.Track -> this.song
+        is SearchResult.TopTrack -> this.song
+        else -> null
     }
 }

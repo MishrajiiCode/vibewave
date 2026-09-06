@@ -57,7 +57,9 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.music.bitchord.data.ai.AiMusicEngine
 import com.music.bitchord.data.firebase.ActivityTracker
+import com.music.bitchord.data.firebase.FirestoreManager
 import com.music.bitchord.data.model.Song
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -71,6 +73,7 @@ fun AiSongPickerSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
+    val tasteProfile by FirestoreManager.tasteProfile.collectAsStateWithLifecycle()
     var selectedMood by remember { mutableStateOf(AiMusicEngine.getContextualTimeVibe()) }
     var selectedEnergy by remember { mutableStateOf(AiMusicEngine.Energy.BALANCED) }
     var isLoading by remember { mutableStateOf(false) }
@@ -125,9 +128,15 @@ fun AiSongPickerSheet(
                             color = Color.White,
                         )
                         Text(
-                            text = "Zero-API on-device curation",
+                            text = if (tasteProfile.playCount > 0 || tasteProfile.favoriteCount > 0) {
+                                "Personalized with your taste (${tasteProfile.playCount} plays · ${tasteProfile.favoriteCount} favs)"
+                            } else {
+                                "Zero-API on-device curation"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF81ECEC),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }

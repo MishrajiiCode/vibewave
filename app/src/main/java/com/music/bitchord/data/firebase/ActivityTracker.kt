@@ -24,6 +24,7 @@ object ActivityTracker {
     }
 
     fun onSongPlay(song: Song) {
+        FirestoreManager.recordPlay(song)
         FirestoreManager.logActivity(
             activityType = "SONG_PLAY",
             title = "Playing: ${song.title}",
@@ -42,19 +43,31 @@ object ActivityTracker {
 
     fun onSongSkip(song: Song?) {
         if (song == null) return
+        FirestoreManager.recordSkip(song)
         FirestoreManager.logActivity(
             activityType = "SONG_SKIP",
             title = "Skipped: ${song.title}",
-            details = "Artist: ${song.artist}",
+            details = "Artist: ${song.artist} · ID: ${song.videoId}",
         )
     }
 
     fun onSongLike(song: Song, isLiked: Boolean) {
+        FirestoreManager.recordLike(song, isLiked)
         val action = if (isLiked) "Liked" else "Unliked"
         FirestoreManager.logActivity(
             activityType = "SONG_RATING",
             title = "$action: ${song.title}",
-            details = "Artist: ${song.artist}",
+            details = "Artist: ${song.artist} · ID: ${song.videoId}",
+        )
+    }
+
+    fun onSongLike(songTitle: String, artist: String, videoId: String, isLiked: Boolean) {
+        FirestoreManager.recordLike(songTitle, artist, videoId, isLiked)
+        val action = if (isLiked) "Liked" else "Unliked"
+        FirestoreManager.logActivity(
+            activityType = "SONG_RATING",
+            title = "$action: $songTitle",
+            details = "Artist: $artist · ID: $videoId",
         )
     }
 

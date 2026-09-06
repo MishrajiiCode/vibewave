@@ -405,6 +405,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val previous = likeStatusOf(videoId)
         if (previous == status) return
         LikeState.set(videoId, status)
+        val isLiked = (status == LikeStatus.LIKE)
+        runCatching {
+            val knownSong = (_library.value as? UiState.Success)?.data?.likedSongs?.firstOrNull { it.videoId == videoId }
+                ?: _detailStack.value.asSequence().mapNotNull { (it.songs as? UiState.Success)?.data }.flatten().firstOrNull { it.videoId == videoId }
+            val title = knownSong?.title ?: "Track $videoId"
+            val artist = knownSong?.artist ?: "Unknown Artist"
+            com.music.bitchord.data.firebase.ActivityTracker.onSongLike(title, artist, videoId, isLiked)
+        }
         viewModelScope.launch {
             YtMusicRepository.rate(videoId, status).fold(
                 onSuccess = {
@@ -1548,6 +1556,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 // see [SourceResolver.substituteForYouTube] — which upgrades
                 // the ones it holds without any of them having to be a
                 // separate row to pick between.
+                runCatching {
+                    com.music.bitchord.data.firebase.ActivityTracker.onSearch(request.query)
+                }
                 val result = YtMusicRepository.searchPage(request.query, request.filter)
                 // A search that has been superseded shouldn't land on screen,
                 // whether it succeeded or failed.

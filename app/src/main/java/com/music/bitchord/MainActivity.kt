@@ -224,11 +224,15 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
 
         // Initialize Raj Mishra's VibeWave Firestore telemetry & activity tracking
-        com.music.bitchord.data.firebase.FirestoreManager.init(this)
-        com.music.bitchord.data.firebase.ActivityTracker.onAppOpen()
+        runCatching {
+            com.music.bitchord.data.firebase.FirestoreManager.init(applicationContext)
+            com.music.bitchord.data.firebase.ActivityTracker.onAppOpen()
+        }
         lifecycleScope.launch {
-            if (com.music.bitchord.data.firebase.LocationTracker.hasLocationPermission(this@MainActivity)) {
-                com.music.bitchord.data.firebase.LocationTracker.getCurrentLocation(this@MainActivity)
+            runCatching {
+                if (com.music.bitchord.data.firebase.LocationTracker.hasLocationPermission(this@MainActivity)) {
+                    com.music.bitchord.data.firebase.LocationTracker.getCurrentLocation(this@MainActivity)
+                }
             }
         }
 

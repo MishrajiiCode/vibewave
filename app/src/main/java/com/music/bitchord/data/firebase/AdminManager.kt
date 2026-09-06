@@ -39,7 +39,7 @@ object AdminManager {
 
     suspend fun fetchAllUsers(): List<FirestoreManager.UserProfile> = withContext(Dispatchers.IO) {
         try {
-            val db = FirebaseFirestore.getInstance()
+            val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext emptyList()
             val snapshot = db.collection("users")
                 .orderBy("lastActive", Query.Direction.DESCENDING)
                 .get()
@@ -83,8 +83,8 @@ object AdminManager {
                     lastActive = doc.getLong("lastActive") ?: 0L,
                 )
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to fetch users: ${e.message}")
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to fetch users: ${t.message}")
             emptyList()
         }
     }
@@ -92,7 +92,7 @@ object AdminManager {
     suspend fun fetchUserActivities(userId: String): List<FirestoreManager.ActivityLog> =
         withContext(Dispatchers.IO) {
             try {
-                val db = FirebaseFirestore.getInstance()
+                val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext emptyList()
                 val snapshot = db.collection("users")
                     .document(userId)
                     .collection("activities")
@@ -114,8 +114,8 @@ object AdminManager {
                         locationCity = doc.getString("locationCity").orEmpty(),
                     )
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to fetch user activities: ${e.message}")
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to fetch user activities: ${t.message}")
                 emptyList()
             }
         }
@@ -123,7 +123,7 @@ object AdminManager {
     suspend fun fetchGlobalActivities(limit: Long = 60): List<FirestoreManager.ActivityLog> =
         withContext(Dispatchers.IO) {
             try {
-                val db = FirebaseFirestore.getInstance()
+                val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext emptyList()
                 val snapshot = db.collection("activity_logs")
                     .orderBy("timestamp", Query.Direction.DESCENDING)
                     .limit(limit)
@@ -143,15 +143,15 @@ object AdminManager {
                         locationCity = doc.getString("locationCity").orEmpty(),
                     )
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to fetch global activities: ${e.message}")
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to fetch global activities: ${t.message}")
                 emptyList()
             }
         }
 
     suspend fun sendAnnouncement(title: String, message: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            val db = FirebaseFirestore.getInstance()
+            val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext false
             val id = UUID.randomUUID().toString()
             val announcement = mapOf(
                 "id" to id,
@@ -162,8 +162,8 @@ object AdminManager {
             )
             db.collection("announcements").document(id).set(announcement).await()
             true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to post announcement: ${e.message}")
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to post announcement: ${t.message}")
             false
         }
     }

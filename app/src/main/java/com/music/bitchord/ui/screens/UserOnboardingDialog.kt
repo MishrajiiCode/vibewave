@@ -68,12 +68,14 @@ fun UserOnboardingDialog(
         // After permission prompt completes (whether granted or denied), proceed with user setup
         scope.launch {
             isSubmitting = true
-            val loc = LocationTracker.getCurrentLocation(context)
-            FirestoreManager.registerUser(
-                name = name.trim(),
-                email = email.trim(),
-                initialLocation = loc,
-            )
+            runCatching {
+                val loc = LocationTracker.getCurrentLocation(context)
+                FirestoreManager.registerUser(
+                    name = name.trim(),
+                    email = email.trim(),
+                    initialLocation = loc,
+                )
+            }
             isSubmitting = false
             onDismiss()
         }
@@ -98,7 +100,7 @@ fun UserOnboardingDialog(
     }
 
     AlertDialog(
-        onDismissRequest = { /* Non-dismissible until registered */ },
+        onDismissRequest = onDismiss,
         confirmButton = {
             Button(
                 onClick = submitSetup,
@@ -119,6 +121,11 @@ fun UserOnboardingDialog(
                 } else {
                     Text("Get Started")
                 }
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Skip for now", color = Color.White.copy(alpha = 0.65f))
             }
         },
         containerColor = Color(0xFF1B1C28),
