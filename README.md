@@ -12,8 +12,8 @@
 
 <br/>
 
-[![Latest release](https://img.shields.io/github/v/release/MishrajiiCode/VibeWave?style=for-the-badge&labelColor=0d1117)](https://github.com/MishrajiiCode/VibeWave/releases)
-[![License](https://img.shields.io/github/license/MishrajiiCode/VibeWave?style=for-the-badge&labelColor=0d1117)](https://github.com/MishrajiiCode/VibeWave/blob/main/LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/MishrajiiCode/vibewave?style=for-the-badge&labelColor=0d1117)](https://github.com/MishrajiiCode/vibewave/releases)
+[![License](https://img.shields.io/github/license/MishrajiiCode/vibewave?style=for-the-badge&labelColor=0d1117)](https://github.com/MishrajiiCode/vibewave/blob/main/LICENSE)
 [![Developer](https://img.shields.io/badge/Developer-Raj%20Mishra-6c5ce7?style=for-the-badge&logo=github)](https://github.com/MishrajiiCode)
 
 <br/>
@@ -77,7 +77,7 @@ VibeWave features a built-in on-device AI recommendation engine that analyzes yo
 
 <h1><a id="download"></a>Download</h1>
 
-Grab the latest signed APK from the [Releases](https://github.com/MishrajiiCode/VibeWave/releases) page.
+Grab the latest signed APK from the [Releases](https://github.com/MishrajiiCode/vibewave/releases) page.
 
 </div>
 
