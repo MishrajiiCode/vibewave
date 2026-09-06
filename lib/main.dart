@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'core/router/app_router.dart';
@@ -20,21 +21,29 @@ Future<void> main() async {
     debugPrint('Firebase initialization notice: $e');
   }
 
-  // Initialize background audio
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.vibewave.music.channel.audio',
-    androidNotificationChannelName: 'VibeWave Audio',
-    androidNotificationOngoing: true,
-    androidShowNotificationBadge: true,
-    androidNotificationIcon: 'mipmap/ic_launcher',
-    preloadArtwork: true,
-  );
+  // Initialize background audio for mobile
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS)) {
+    try {
+      await JustAudioBackground.init(
+        androidNotificationChannelId: 'com.vibewave.music.channel.audio',
+        androidNotificationChannelName: 'VibeWave Audio',
+        androidNotificationOngoing: true,
+        androidShowNotificationBadge: true,
+        androidNotificationIcon: 'mipmap/ic_launcher',
+        preloadArtwork: true,
+      );
+    } catch (e) {
+      debugPrint('JustAudioBackground init notice: $e');
+    }
 
-  // Force portrait orientation
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+    // Force portrait orientation on mobile
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
 
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
