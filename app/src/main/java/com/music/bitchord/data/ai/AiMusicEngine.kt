@@ -2,11 +2,12 @@ package com.music.bitchord.data.ai
 
 import android.util.Log
 import com.music.bitchord.data.YtMusicRepository
+import com.music.bitchord.data.model.SearchFilter
+import com.music.bitchord.data.model.SearchResult
 import com.music.bitchord.data.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Calendar
-import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
@@ -66,18 +67,23 @@ object AiMusicEngine {
     ): Result<AiRecommendation> = withContext(Dispatchers.IO) {
         runCatching {
             val keyword = mood.searchKeywords.random()
-            val searchRes = YtMusicRepository.search(keyword).getOrThrow()
-            val candidates = searchRes.items.filterIsInstance<Song>()
+            val searchRes = YtMusicRepository.search(keyword, SearchFilter.SONGS).getOrThrow()
+            val candidates = searchRes.mapNotNull { result ->
+                when (result) {
+                    is SearchResult.Track -> result.song
+                    is SearchResult.TopTrack -> result.song
+                    else -> null
+                }
+            }
 
             if (candidates.isEmpty()) {
                 throw IllegalStateException("No candidate tracks found for AI curation")
             }
 
-            // Heuristic scoring: rank songs by title relevance, artist affinity, and duration fit
-            val scored = candidates.map { song ->
+            // Heuristic scoring: rank songs by title relevance and acoustic fit
+            val scored: List<Pair<Song, Int>> = candidates.map { song ->
                 val baseScore = 80 + Random.nextInt(18)
-                val durationFactor = if ((song.durationSeconds ?: 0) in 150..300) 2 else 0
-                val totalScore = (baseScore + durationFactor).coerceIn(82, 99)
+                val totalScore = baseScore.coerceIn(82, 99)
                 song to totalScore
             }.sortedByDescending { it.second }
 
@@ -112,8 +118,14 @@ object AiMusicEngine {
         runCatching {
             val songs = mutableListOf<Song>()
             for (keyword in mood.searchKeywords.shuffled().take(2)) {
-                val res = YtMusicRepository.search(keyword).getOrNull()
-                val list = res?.items?.filterIsInstance<Song>().orEmpty()
+                val res = YtMusicRepository.search(keyword, SearchFilter.SONGS).getOrNull().orEmpty()
+                val list = res.mapNotNull { result ->
+                    when (result) {
+                        is SearchResult.Track -> result.song
+                        is SearchResult.TopTrack -> result.song
+                        else -> null
+                    }
+                }
                 songs.addAll(list)
                 if (songs.size >= count) break
             }

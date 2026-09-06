@@ -211,12 +211,14 @@ import com.music.bitchord.ui.utils.rememberIosOverscrollFactory
 import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import java.util.Locale
 
 /** A full first screen of a native YouTube Music radio before AutoPlay tops it up. */
 private const val INITIAL_RADIO_TRACKS = 24
 
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -224,7 +226,7 @@ private const val INITIAL_RADIO_TRACKS = 24
         // Initialize Raj Mishra's VibeWave Firestore telemetry & activity tracking
         com.music.bitchord.data.firebase.FirestoreManager.init(this)
         com.music.bitchord.data.firebase.ActivityTracker.onAppOpen()
-        androidx.lifecycle.lifecycleScope.launch {
+        lifecycleScope.launch {
             if (com.music.bitchord.data.firebase.LocationTracker.hasLocationPermission(this@MainActivity)) {
                 com.music.bitchord.data.firebase.LocationTracker.getCurrentLocation(this@MainActivity)
             }
@@ -353,6 +355,7 @@ private fun BitChordApp(
     // What folds [GlassNavBar] between its expanded and inline shapes. Held here
     // rather than inside the bar because the page's scroll is what drives it,
     // and the page is a sibling of the bar rather than a child.
+    val navBarScroll = rememberFloatingTabBarScrollConnection()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     // VibeWave Features State

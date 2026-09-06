@@ -297,7 +297,6 @@ dependencies {
 
     // ---- Location Services ----
     implementation("com.google.android.gms:play-services-location:21.3.0")
-
     testImplementation("junit:junit:4.13.2")
     // A real HTTP server for the addon tests. The addon protocol is entirely
     // "what does this app send, and what does it do with what comes back", and
@@ -308,3 +307,8 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }
+
+configurations.all {
+    exclude(group = "com.google.firebase", module = "protolite-well-known-types")
+}
+
