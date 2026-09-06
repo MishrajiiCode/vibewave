@@ -2,7 +2,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/song_model.dart';
 import '../../data/services/audio_player_service.dart';
-import '../../data/services/firebase_music_service.dart';
 
 final audioPlayerServiceProvider = Provider<AudioPlayerService>((ref) {
   final service = AudioPlayerService();

@@ -4,7 +4,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../providers/music_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../widgets/song_tile.dart';
 
 class LibraryScreen extends ConsumerWidget {
@@ -14,7 +13,6 @@ class LibraryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final likedIds = ref.watch(likedSongIdsProvider);
     final allSongs = ref.watch(allSongsProvider);
-    final user = ref.watch(currentUserProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,

@@ -30,9 +30,7 @@ class YouTubeService {
         'title': video.title,
         'author': video.author,
         'duration': video.duration?.inSeconds ?? 0,
-        'thumbnailUrl': video.thumbnails.maxResUrl ??
-            video.thumbnails.highResUrl ??
-            video.thumbnails.standardResUrl,
+        'thumbnailUrl': video.thumbnails.highResUrl,
         'videoId': videoId,
       };
     } catch (e) {

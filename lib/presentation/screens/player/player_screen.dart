@@ -1,17 +1,17 @@
 // lib/presentation/screens/player/player_screen.dart
-import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:just_audio/just_audio.dart';
+import 'package:just_audio/just_audio.dart' hide PlayerState;
 import 'package:palette_generator/palette_generator.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../providers/player_provider.dart';
 import '../../providers/music_provider.dart';
 import '../../../data/services/audio_player_service.dart';
 import '../../../data/models/song_model.dart';
+import '../../widgets/song_tile.dart';
 
 class PlayerScreen extends ConsumerStatefulWidget {
   const PlayerScreen({super.key});
@@ -567,7 +567,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
             ListTile(
               leading: const Icon(Icons.info_outline_rounded, color: AppColors.textSecondary),
               title: const Text('Song Info', style: TextStyle(color: Colors.white)),
-              subtitle: Text('${song.category} • ${song.year}',
+              subtitle: Text('${song.category} â€¢ ${song.year}',
                   style: const TextStyle(color: AppColors.textTertiary)),
               onTap: () => Navigator.pop(context),
             ),

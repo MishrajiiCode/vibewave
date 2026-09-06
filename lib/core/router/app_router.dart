@@ -2,17 +2,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../presentation/screens/splash/splash_screen.dart';
-import '../../presentation/screens/home/home_screen.dart';
-import '../../presentation/screens/player/player_screen.dart';
-import '../../presentation/screens/search/search_screen.dart';
-import '../../presentation/screens/library/library_screen.dart';
-import '../../presentation/screens/ai_discover/ai_discover_screen.dart';
-import '../../presentation/screens/categories/categories_screen.dart';
-import '../../presentation/screens/admin/admin_login_screen.dart';
-import '../../presentation/screens/admin/admin_dashboard_screen.dart';
-import '../../presentation/screens/admin/add_song_screen.dart';
-import '../../presentation/widgets/main_scaffold.dart';
+import 'package:vibewave/presentation/screens/splash/splash_screen.dart';
+import 'package:vibewave/presentation/screens/home/home_screen.dart';
+import 'package:vibewave/presentation/screens/player/player_screen.dart';
+import 'package:vibewave/presentation/screens/search/search_screen.dart';
+import 'package:vibewave/presentation/screens/library/library_screen.dart';
+import 'package:vibewave/presentation/screens/ai_discover/ai_discover_screen.dart';
+import 'package:vibewave/presentation/screens/categories/categories_screen.dart';
+import 'package:vibewave/presentation/screens/admin/admin_login_screen.dart';
+import 'package:vibewave/presentation/screens/admin/admin_dashboard_screen.dart';
+import 'package:vibewave/presentation/screens/admin/add_song_screen.dart';
+import 'package:vibewave/presentation/widgets/main_scaffold.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(

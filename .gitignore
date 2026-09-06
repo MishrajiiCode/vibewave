@@ -13,6 +13,7 @@ android/captures/
 android/gradlew
 android/gradlew.bat
 android/gradle/
+android/app/src/main/java/
 
 # Firebase - DO NOT commit these!
 google-services.json

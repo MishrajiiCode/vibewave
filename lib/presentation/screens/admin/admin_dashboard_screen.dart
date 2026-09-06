@@ -7,7 +7,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../data/models/song_model.dart';
 import '../../../data/services/firebase_music_service.dart';
 import '../../providers/music_provider.dart';
-import '../../providers/auth_provider.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});

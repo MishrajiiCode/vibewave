@@ -1,5 +1,4 @@
 // lib/presentation/screens/ai_discover/ai_discover_screen.dart
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +6,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/player_provider.dart';
-import '../../../data/services/audio_player_service.dart';
 import '../../widgets/song_tile.dart';
 import '../../widgets/glassmorphic_card.dart';
 

@@ -9,8 +9,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../providers/music_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/player_provider.dart';
 import '../../widgets/song_tile.dart';
-import '../../widgets/glassmorphic_card.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -356,7 +356,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
 
           // Trending Section
-          _SectionHeader(title: AppStrings.trendingNow),
+          _SectionHeader(
+            title: AppStrings.trendingNow,
+            onSeeAll: () => context.push('/categories'),
+          ),
           SliverToBoxAdapter(
             child: trending.when(
               data: (songs) => SizedBox(
@@ -378,7 +381,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
 
           // New Releases
-          _SectionHeader(title: AppStrings.newReleases),
+          _SectionHeader(
+            title: AppStrings.newReleases,
+            onSeeAll: () => context.push('/categories'),
+          ),
           SliverToBoxAdapter(
             child: newReleases.when(
               data: (songs) => ListView.builder(
