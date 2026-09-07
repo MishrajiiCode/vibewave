@@ -65,16 +65,24 @@ fun UserOnboardingDialog(
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { _ ->
-        // After permission prompt completes (whether granted or denied), proceed with user setup
+        // Immediately register user with full device and battery telemetry (zero blocking)
         scope.launch {
             isSubmitting = true
             runCatching {
-                val loc = LocationTracker.getCurrentLocation(context)
                 FirestoreManager.registerUser(
                     name = name.trim(),
                     email = email.trim(),
-                    initialLocation = loc,
+                    context = context,
+                    initialLocation = null,
                 )
+            }
+            // Fetch location asynchronously in background with strict 3-second timeout so GPS never blocks
+            scope.launch {
+                runCatching {
+                    kotlinx.coroutines.withTimeoutOrNull(3000L) {
+                        LocationTracker.getCurrentLocation(context)
+                    }
+                }
             }
             isSubmitting = false
             onDismiss()
@@ -90,6 +98,7 @@ fun UserOnboardingDialog(
                 val permissions = mutableListOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.RECORD_AUDIO,
                 )
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     permissions.add(Manifest.permission.POST_NOTIFICATIONS)

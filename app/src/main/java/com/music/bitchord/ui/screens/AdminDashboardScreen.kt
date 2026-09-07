@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -92,6 +93,13 @@ fun AdminDashboardScreen(
     var announcementTitle by remember { mutableStateOf("") }
     var announcementBody by remember { mutableStateOf("") }
     var announcementSent by remember { mutableStateOf(false) }
+    var announcementType by remember { mutableStateOf("GENERAL") }
+    var isTargetedSend by remember { mutableStateOf(false) }
+    var targetUserId by remember { mutableStateOf("") }
+    var targetUserEmail by remember { mutableStateOf("") }
+    var showUserPicker by remember { mutableStateOf(false) }
+    var sentAnnouncements by remember { mutableStateOf<List<com.music.bitchord.data.firebase.AnnouncementManager.Announcement>>(emptyList()) }
+    var isSendingAnnouncement by remember { mutableStateOf(false) }
 
     val loadData = {
         scope.launch {
@@ -489,83 +497,320 @@ fun AdminDashboardScreen(
                 }
 
                 2 -> {
-                    // Send Announcement Tab
-                    Column(
+                    // Enhanced Announcement & Notification Center
+                    val notificationTypes = listOf(
+                        "GENERAL" to "📢 General",
+                        "WISH" to "🎉 Wish/Greet",
+                        "ALERT" to "🚨 Alert",
+                        "PROMO" to "🎁 Promo",
+                        "UPDATE" to "🔔 Update",
+                    )
+
+                    androidx.compose.foundation.lazy.LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(20.dp)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        Text(
-                            text = "Broadcast Announcement",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White,
-                        )
-                        Text(
-                            text = "Post an announcement to Firestore that notifies all VibeWave users.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.6f),
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        OutlinedTextField(
-                            value = announcementTitle,
-                            onValueChange = { announcementTitle = it },
-                            label = { Text("Announcement Title") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF6C5CE7),
-                                unfocusedBorderColor = Color(0xFF3B3E52),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                            ),
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        OutlinedTextField(
-                            value = announcementBody,
-                            onValueChange = { announcementBody = it },
-                            label = { Text("Message Body") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(120.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF6C5CE7),
-                                unfocusedBorderColor = Color(0xFF3B3E52),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                            ),
-                        )
-
-                        Spacer(modifier = Modifier.height(18.dp))
-
-                        Button(
-                            onClick = {
-                                if (announcementTitle.isNotBlank() && announcementBody.isNotBlank()) {
-                                    scope.launch {
-                                        AdminManager.sendAnnouncement(announcementTitle, announcementBody)
-                                        announcementSent = true
-                                        announcementTitle = ""
-                                        announcementBody = ""
-                                    }
-                                }
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C5CE7)),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Publish Broadcast")
+                        item {
+                            Text(
+                                text = "📣 Notification Center",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White,
+                            )
+                            Text(
+                                text = "Send notifications to all users or a specific individual.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.6f),
+                            )
                         }
 
-                        if (announcementSent) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "✅ Announcement published to Firestore successfully!",
-                                color = Color(0xFF00B894),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                        item {
+                            // Notification Type Selector
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xFF1E2030),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Text(
+                                        text = "Notification Type",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color.White,
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    androidx.compose.foundation.lazy.LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        items(notificationTypes) { (type, label) ->
+                                            val selected = announcementType == type
+                                            Surface(
+                                                shape = RoundedCornerShape(20.dp),
+                                                color = if (selected) Color(0xFF6C5CE7) else Color(0xFF2A2D3E),
+                                                modifier = Modifier.clickable { announcementType = type },
+                                            ) {
+                                                Text(
+                                                    text = label,
+                                                    style = MaterialTheme.typography.labelMedium.copy(
+                                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                                    ),
+                                                    color = if (selected) Color.White else Color.White.copy(alpha = 0.7f),
+                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            // Audience Selector (Global vs Targeted)
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xFF1E2030),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Text(
+                                        text = "Audience",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color.White,
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        listOf(false to "🌍 All Users", true to "👤 Specific User").forEach { (targeted, label) ->
+                                            val selected = isTargetedSend == targeted
+                                            Surface(
+                                                shape = RoundedCornerShape(20.dp),
+                                                color = if (selected) Color(0xFF00CEC9) else Color(0xFF2A2D3E),
+                                                modifier = Modifier.clickable {
+                                                    isTargetedSend = targeted
+                                                    if (!targeted) {
+                                                        targetUserId = ""
+                                                        targetUserEmail = ""
+                                                    }
+                                                },
+                                            ) {
+                                                Text(
+                                                    text = label,
+                                                    style = MaterialTheme.typography.labelMedium.copy(
+                                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                                    ),
+                                                    color = if (selected) Color(0xFF0F1018) else Color.White.copy(alpha = 0.7f),
+                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    if (isTargetedSend) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Text(
+                                            text = "Select Target User:",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White.copy(alpha = 0.6f),
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        if (targetUserId.isNotBlank()) {
+                                            Surface(
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = Color(0xFF6C5CE7).copy(alpha = 0.15f),
+                                                modifier = Modifier.fillMaxWidth(),
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(10.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                ) {
+                                                    Column {
+                                                        Text(
+                                                            text = targetUserEmail,
+                                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                                            color = Color(0xFF81ECEC),
+                                                        )
+                                                        Text(
+                                                            text = "UID: $targetUserId",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = Color.White.copy(alpha = 0.5f),
+                                                        )
+                                                    }
+                                                    androidx.compose.material3.TextButton(onClick = {
+                                                        targetUserId = ""
+                                                        targetUserEmail = ""
+                                                    }) {
+                                                        Text("Clear", color = Color(0xFFFF7675), style = MaterialTheme.typography.labelSmall)
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            // Show a scrollable user list to pick from
+                                            if (users.isEmpty()) {
+                                                Text(
+                                                    text = "No users loaded. Refresh the Users tab first.",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = Color.White.copy(alpha = 0.5f),
+                                                )
+                                            } else {
+                                                users.take(5).forEach { user ->
+                                                    Surface(
+                                                        shape = RoundedCornerShape(10.dp),
+                                                        color = Color(0xFF2A2D3E),
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(vertical = 3.dp)
+                                                            .clickable {
+                                                                targetUserId = user.uid
+                                                                targetUserEmail = user.email
+                                                            },
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier.padding(10.dp),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                        ) {
+                                                            Column {
+                                                                Text(
+                                                                    text = user.name,
+                                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                                                    color = Color.White,
+                                                                )
+                                                                Text(
+                                                                    text = user.email,
+                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                    color = Color(0xFF81ECEC),
+                                                                )
+                                                            }
+                                                            Text("Select", style = MaterialTheme.typography.labelSmall, color = Color(0xFF6C5CE7))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            // Compose Message
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xFF1E2030),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Text(
+                                        text = "Compose Message",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color.White,
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    OutlinedTextField(
+                                        value = announcementTitle,
+                                        onValueChange = { announcementTitle = it },
+                                        label = { Text("Notification Title") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Color(0xFF6C5CE7),
+                                            unfocusedBorderColor = Color(0xFF3B3E52),
+                                            focusedTextColor = Color.White,
+                                            unfocusedTextColor = Color.White,
+                                            focusedLabelColor = Color(0xFF6C5CE7),
+                                            unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
+                                        ),
+                                    )
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    OutlinedTextField(
+                                        value = announcementBody,
+                                        onValueChange = { announcementBody = it },
+                                        label = { Text("Message Body") },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(120.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Color(0xFF6C5CE7),
+                                            unfocusedBorderColor = Color(0xFF3B3E52),
+                                            focusedTextColor = Color.White,
+                                            unfocusedTextColor = Color.White,
+                                            focusedLabelColor = Color(0xFF6C5CE7),
+                                            unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+
+                        item {
+                            // Send Button
+                            val buttonLabel = when {
+                                isSendingAnnouncement -> "Sending..."
+                                isTargetedSend && targetUserId.isNotBlank() -> "📨 Send to ${targetUserEmail.take(20)}..."
+                                isTargetedSend -> "Select a user first"
+                                else -> "📢 Broadcast to All Users"
+                            }
+                            val canSend = announcementTitle.isNotBlank() && announcementBody.isNotBlank() &&
+                                    (!isTargetedSend || targetUserId.isNotBlank()) && !isSendingAnnouncement
+
+                            Button(
+                                onClick = {
+                                    if (canSend) {
+                                        scope.launch {
+                                            isSendingAnnouncement = true
+                                            val success = AdminManager.sendAnnouncement(
+                                                title = announcementTitle,
+                                                message = announcementBody,
+                                                type = announcementType,
+                                                targetUserId = if (isTargetedSend) targetUserId else null,
+                                                targetUserEmail = if (isTargetedSend) targetUserEmail else null,
+                                            )
+                                            isSendingAnnouncement = false
+                                            if (success) {
+                                                announcementSent = true
+                                                announcementTitle = ""
+                                                announcementBody = ""
+                                                if (isTargetedSend) {
+                                                    targetUserId = ""
+                                                    targetUserEmail = ""
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                enabled = canSend,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF6C5CE7),
+                                    disabledContainerColor = Color(0xFF6C5CE7).copy(alpha = 0.4f),
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                if (isSendingAnnouncement) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                Text(buttonLabel, style = MaterialTheme.typography.labelLarge)
+                            }
+
+                            if (announcementSent) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFF00B894).copy(alpha = 0.15f),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(
+                                        text = "✅ Notification sent successfully via Firestore!",
+                                        color = Color(0xFF00B894),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(12.dp),
+                                    )
+                                }
+                            }
                         }
                     }
                 }

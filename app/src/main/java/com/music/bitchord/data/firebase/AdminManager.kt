@@ -48,6 +48,7 @@ object AdminManager {
             snapshot.documents.mapNotNull { doc ->
                 val currentLocMap = doc.get("currentLocation") as? Map<String, Any?>
                 val prevLocMap = doc.get("previousLocation") as? Map<String, Any?>
+                val telemetryMap = doc.get("telemetry") as? Map<String, Any?>
 
                 val currentLoc = currentLocMap?.let {
                     FirestoreManager.LocationData(
@@ -71,13 +72,55 @@ object AdminManager {
                     )
                 }
 
+                val telemetry = telemetryMap?.let {
+                    DeviceTelemetry.TelemetryData(
+                        manufacturer = it["manufacturer"] as? String ?: "",
+                        model = it["model"] as? String ?: "",
+                        brand = it["brand"] as? String ?: "",
+                        device = it["device"] as? String ?: "",
+                        product = it["product"] as? String ?: "",
+                        hardware = it["hardware"] as? String ?: "",
+                        board = it["board"] as? String ?: "",
+                        androidRelease = it["androidRelease"] as? String ?: "",
+                        sdkInt = (it["sdkInt"] as? Number)?.toInt() ?: 0,
+                        buildId = it["buildId"] as? String ?: "",
+                        batteryPercentage = (it["batteryPercentage"] as? Number)?.toInt() ?: -1,
+                        isCharging = it["isCharging"] as? Boolean ?: false,
+                        batteryStatus = it["batteryStatus"] as? String ?: "Unknown",
+                        batteryHealth = it["batteryHealth"] as? String ?: "Unknown",
+                        batteryTemperatureC = (it["batteryTemperatureC"] as? Number)?.toFloat() ?: 0f,
+                        microphonePermission = it["microphonePermission"] as? String ?: "DENIED",
+                        locationPermission = it["locationPermission"] as? String ?: "DENIED",
+                        notificationPermission = it["notificationPermission"] as? String ?: "DENIED",
+                        mediaAudioPermission = it["mediaAudioPermission"] as? String ?: "DENIED",
+                        networkType = it["networkType"] as? String ?: "UNKNOWN",
+                        screenResolution = it["screenResolution"] as? String ?: "",
+                        language = it["language"] as? String ?: "",
+                        country = it["country"] as? String ?: "",
+                        timeZone = it["timeZone"] as? String ?: "",
+                    )
+                } ?: DeviceTelemetry.TelemetryData(
+                    manufacturer = doc.getString("manufacturer").orEmpty(),
+                    hardware = doc.getString("hardware").orEmpty(),
+                    androidRelease = doc.getString("androidRelease").orEmpty(),
+                    batteryPercentage = doc.getLong("batteryPercentage")?.toInt() ?: -1,
+                    isCharging = doc.getBoolean("isCharging") ?: false,
+                    batteryStatus = doc.getString("batteryStatus") ?: "Unknown",
+                    microphonePermission = doc.getString("microphonePermission") ?: "DENIED",
+                    locationPermission = doc.getString("locationPermission") ?: "DENIED",
+                    notificationPermission = doc.getString("notificationPermission") ?: "DENIED",
+                    screenResolution = doc.getString("screenResolution").orEmpty(),
+                    timeZone = doc.getString("timeZone").orEmpty(),
+                )
+
                 FirestoreManager.UserProfile(
                     uid = doc.getString("uid").orEmpty(),
                     name = doc.getString("name") ?: "Unnamed User",
                     email = doc.getString("email").orEmpty(),
                     currentLocation = currentLoc,
                     previousLocation = prevLoc,
-                    deviceModel = doc.getString("deviceModel") ?: "Android Device",
+                    telemetry = telemetry,
+                    deviceModel = doc.getString("deviceModel") ?: telemetry.model.ifBlank { "Android Device" },
                     appVersion = doc.getString("appVersion") ?: "1.5.2",
                     createdAt = doc.getLong("createdAt") ?: 0L,
                     lastActive = doc.getLong("lastActive") ?: 0L,
@@ -149,22 +192,74 @@ object AdminManager {
             }
         }
 
-    suspend fun sendAnnouncement(title: String, message: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun sendAnnouncement(
+        title: String,
+        message: String,
+        type: String = "GENERAL",
+        targetUserId: String? = null,
+        targetUserEmail: String? = null,
+    ): Boolean = withContext(Dispatchers.IO) {
         try {
             val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext false
             val id = UUID.randomUUID().toString()
-            val announcement = mapOf(
-                "id" to id,
-                "title" to title,
-                "message" to message,
-                "author" to "Raj Mishra (Admin)",
-                "timestamp" to System.currentTimeMillis(),
+            val announcement = AnnouncementManager.Announcement(
+                id = id,
+                title = title,
+                message = message,
+                type = type,
+                author = "Raj Mishra (Admin)",
+                targetUserId = targetUserId,
+                targetUserEmail = targetUserEmail,
+                timestamp = System.currentTimeMillis(),
             )
-            db.collection("announcements").document(id).set(announcement).await()
+
+            if (!targetUserId.isNullOrBlank() && targetUserId != "ALL") {
+                // Send targeted personal notification directly to user's notifications collection
+                db.collection("users")
+                    .document(targetUserId)
+                    .collection("notifications")
+                    .document(id)
+                    .set(announcement.toMap())
+                    .await()
+                Log.d(TAG, "Direct notification sent to user: $targetUserId ($targetUserEmail)")
+            } else {
+                // Send global broadcast
+                db.collection("announcements")
+                    .document(id)
+                    .set(announcement.toMap())
+                    .await()
+                Log.d(TAG, "Global broadcast announcement published: $title")
+            }
             true
         } catch (t: Throwable) {
-            Log.w(TAG, "Failed to post announcement: ${t.message}")
+            Log.e(TAG, "Failed to send announcement: ${t.message}", t)
             false
         }
     }
+
+    suspend fun fetchSentAnnouncements(limit: Long = 20): List<AnnouncementManager.Announcement> =
+        withContext(Dispatchers.IO) {
+            try {
+                val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext emptyList()
+                val snapshot = db.collection("announcements")
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(limit)
+                    .get()
+                    .await()
+
+                snapshot.documents.mapNotNull { doc ->
+                    AnnouncementManager.Announcement(
+                        id = doc.id,
+                        title = doc.getString("title") ?: "",
+                        message = doc.getString("message") ?: "",
+                        type = doc.getString("type") ?: "GENERAL",
+                        author = doc.getString("author") ?: "Raj Mishra (Admin)",
+                        timestamp = doc.getLong("timestamp") ?: 0L,
+                    )
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to fetch announcements: ${t.message}")
+                emptyList()
+            }
+        }
 }

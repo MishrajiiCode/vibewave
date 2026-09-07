@@ -72,17 +72,32 @@ object AiMusicEngine {
             val taste = FirestoreManager.getUserTasteProfile()
             val candidates = mutableListOf<Song>()
 
-            // 1. Primary mood-based search
-            val primaryKeyword = mood.searchKeywords.random()
-            val primarySearch = YtMusicRepository.search(primaryKeyword, SearchFilter.SONGS).getOrNull().orEmpty()
-            candidates.addAll(primarySearch.mapNotNull { it.toSongOrNull() })
+            // Pass 1: Try ALL mood keywords (not just one) for broader coverage
+            for (keyword in mood.searchKeywords) {
+                val results = YtMusicRepository.search(keyword, SearchFilter.SONGS).getOrNull().orEmpty()
+                candidates.addAll(results.mapNotNull { it.toSongOrNull() })
+                if (candidates.size >= 20) break // stop early once we have enough
+            }
 
-            // 2. Hybrid search if user has top artists from Firestore history
-            val topArtist = taste.topArtists.maxByOrNull { it.value }?.key
-            if (!topArtist.isNullOrBlank() && (taste.topArtists[topArtist] ?: 0) > 1) {
-                val hybridKeyword = "$topArtist ${mood.searchKeywords.first()}"
+            // Pass 2: Hybrid search using user's top artists × mood context
+            val topArtists = taste.topArtists.entries.sortedByDescending { it.value }.take(3).map { it.key }
+            for (artist in topArtists) {
+                if (candidates.size >= 40) break
+                val hybridKeyword = "$artist ${mood.searchKeywords.first()}"
                 val hybridSearch = YtMusicRepository.search(hybridKeyword, SearchFilter.SONGS).getOrNull().orEmpty()
                 candidates.addAll(hybridSearch.mapNotNull { it.toSongOrNull() })
+            }
+
+            // Pass 3: Fallback — direct artist search if still thin
+            if (candidates.size < 10 && topArtists.isNotEmpty()) {
+                val artistRes = YtMusicRepository.search(topArtists.first(), SearchFilter.SONGS).getOrNull().orEmpty()
+                candidates.addAll(artistRes.mapNotNull { it.toSongOrNull() })
+            }
+
+            // Pass 4: Generic fallback if still no candidates
+            if (candidates.isEmpty()) {
+                val fallback = YtMusicRepository.search("top hits 2024", SearchFilter.SONGS).getOrNull().orEmpty()
+                candidates.addAll(fallback.mapNotNull { it.toSongOrNull() })
             }
 
             val uniqueCandidates = candidates.distinctBy { it.videoId }
@@ -90,13 +105,13 @@ object AiMusicEngine {
                 throw IllegalStateException("No candidate tracks found for AI curation")
             }
 
-            // 3. Score every track using Firestore taste signals (plays, skips, favorites)
+            // Score every track using Firestore taste signals (plays, skips, favorites)
             val scored = uniqueCandidates.map { song ->
                 val score = calculateScore(song, taste)
                 song to score
             }.sortedByDescending { it.second }
 
-            // Prefer tracks that pass the skip-threshold
+            // Prefer tracks that pass the skip-threshold, but never block entirely
             val filtered = scored.filter { it.second >= 60 }
             val best = (if (filtered.isNotEmpty()) filtered else scored).first()
 

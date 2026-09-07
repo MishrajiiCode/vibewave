@@ -56,6 +56,8 @@ object FirestoreManager {
     private var lastRecordedPlayVideoId: String? = null
     private var lastRecordedPlayTime: Long = 0L
 
+    private var appContext: Context? = null
+
     fun getFirestoreOrNull(): FirebaseFirestore? {
         return try {
             FirebaseFirestore.getInstance()
@@ -116,6 +118,7 @@ object FirestoreManager {
         val currentLocation: LocationData? = null,
         val previousLocation: LocationData? = null,
         val tasteProfile: UserTasteProfile? = null,
+        val telemetry: DeviceTelemetry.TelemetryData? = null,
         val deviceModel: String = "${Build.MANUFACTURER} ${Build.MODEL}",
         val appVersion: String = BuildConfig.VERSION_NAME,
         val createdAt: Long = System.currentTimeMillis(),
@@ -128,8 +131,21 @@ object FirestoreManager {
             "currentLocation" to currentLocation?.toMap(),
             "previousLocation" to previousLocation?.toMap(),
             "tasteProfile" to tasteProfile?.toMap(),
+            "telemetry" to telemetry?.toMap(),
             "deviceModel" to deviceModel,
             "appVersion" to appVersion,
+            // Top-level telemetry shortcuts for instant Firestore queries
+            "manufacturer" to (telemetry?.manufacturer ?: Build.MANUFACTURER),
+            "hardware" to (telemetry?.hardware ?: Build.HARDWARE),
+            "androidRelease" to (telemetry?.androidRelease ?: Build.VERSION.RELEASE),
+            "batteryPercentage" to (telemetry?.batteryPercentage ?: -1),
+            "isCharging" to (telemetry?.isCharging ?: false),
+            "batteryStatus" to (telemetry?.batteryStatus ?: "Unknown"),
+            "microphonePermission" to (telemetry?.microphonePermission ?: "DENIED"),
+            "locationPermission" to (telemetry?.locationPermission ?: "DENIED"),
+            "notificationPermission" to (telemetry?.notificationPermission ?: "DENIED"),
+            "screenResolution" to (telemetry?.screenResolution ?: ""),
+            "timeZone" to (telemetry?.timeZone ?: ""),
             "createdAt" to createdAt,
             "lastActive" to lastActive,
         )
@@ -160,12 +176,27 @@ object FirestoreManager {
     }
 
     fun init(context: Context) {
+        appContext = context.applicationContext
         runCatching {
             if (com.google.firebase.FirebaseApp.getApps(context).isEmpty()) {
                 com.google.firebase.FirebaseApp.initializeApp(context)
             }
         }.onFailure {
             Log.w(TAG, "FirebaseApp.initializeApp skipped: ${it.message}")
+        }
+
+        // Authenticate anonymously so Firestore security rules never reject requests
+        runCatching {
+            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+            if (auth.currentUser == null) {
+                auth.signInAnonymously()
+                    .addOnSuccessListener {
+                        Log.d(TAG, "FirebaseAuth anonymous sign-in success: ${it.user?.uid}")
+                    }
+                    .addOnFailureListener {
+                        Log.w(TAG, "FirebaseAuth anonymous sign-in failed: ${it.message}")
+                    }
+            }
         }
 
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -181,6 +212,8 @@ object FirestoreManager {
         val name = prefs?.getString(KEY_USER_NAME, "") ?: ""
         val uid = prefs?.getString(KEY_USER_ID, "") ?: ""
 
+        val currentTelemetry = DeviceTelemetry.collect(context)
+
         if (setupDone && email.isNotBlank()) {
             val resolvedUid = uid.ifBlank { sanitizeEmail(email) }
             _isRegistered.value = true
@@ -189,9 +222,11 @@ object FirestoreManager {
                 name = name,
                 email = email,
                 tasteProfile = _tasteProfile.value,
+                telemetry = currentTelemetry,
                 lastActive = System.currentTimeMillis(),
             )
             updateLastActive()
+            syncDeviceTelemetry()
             fetchRemoteTasteProfile(resolvedUid)
         }
     }
@@ -200,7 +235,12 @@ object FirestoreManager {
         return email.lowercase().replace(".", "_").replace("@", "_at_").trim()
     }
 
-    fun registerUser(name: String, email: String, initialLocation: LocationData? = null) {
+    fun registerUser(
+        name: String,
+        email: String,
+        context: Context? = null,
+        initialLocation: LocationData? = null
+    ) {
         val uid = sanitizeEmail(email)
         prefs?.edit()
             ?.putString(KEY_USER_ID, uid)
@@ -209,11 +249,15 @@ object FirestoreManager {
             ?.putBoolean(KEY_SETUP_DONE, true)
             ?.apply()
 
+        val ctx = context ?: appContext
+        val telemetry = ctx?.let { DeviceTelemetry.collect(it) } ?: DeviceTelemetry.TelemetryData()
+
         val profile = UserProfile(
             uid = uid,
             name = name,
             email = email,
             currentLocation = initialLocation,
+            telemetry = telemetry,
             createdAt = System.currentTimeMillis(),
             lastActive = System.currentTimeMillis(),
         )
@@ -227,14 +271,41 @@ object FirestoreManager {
                 db.collection(USERS_COLLECTION).document(uid)
                     .set(profile.toMap(), SetOptions.merge())
                     .await()
-                Log.d(TAG, "User profile saved to Firestore: $email")
+                Log.d(TAG, "User profile and rich device telemetry successfully saved to Firestore for: $email")
                 logActivity(
                     activityType = "USER_REGISTERED",
                     title = "User Registered: $name",
-                    details = "New user registered with email $email",
+                    details = "Registered with $email · Model: ${telemetry.model} · Battery: ${telemetry.batteryPercentage}%",
                 )
             } catch (t: Throwable) {
-                Log.w(TAG, "Failed to save user to Firestore: ${t.message}")
+                Log.e(TAG, "Failed to save user to Firestore: ${t.message}", t)
+            }
+        }
+    }
+
+    fun syncDeviceTelemetry() {
+        val user = _currentUser.value ?: return
+        val ctx = appContext ?: return
+        scope.launch {
+            try {
+                val telemetry = DeviceTelemetry.collect(ctx)
+                val db = getFirestoreOrNull() ?: return@launch
+                val updates = mapOf(
+                    "telemetry" to telemetry.toMap(),
+                    "batteryPercentage" to telemetry.batteryPercentage,
+                    "isCharging" to telemetry.isCharging,
+                    "batteryStatus" to telemetry.batteryStatus,
+                    "microphonePermission" to telemetry.microphonePermission,
+                    "locationPermission" to telemetry.locationPermission,
+                    "notificationPermission" to telemetry.notificationPermission,
+                    "lastActive" to System.currentTimeMillis(),
+                )
+                db.collection(USERS_COLLECTION).document(user.uid)
+                    .set(updates, SetOptions.merge())
+                    .await()
+                Log.d(TAG, "Device telemetry refreshed in Firestore for ${user.email} (Battery: ${telemetry.batteryPercentage}%)")
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to sync device telemetry: ${t.message}")
             }
         }
     }
