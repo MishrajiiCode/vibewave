@@ -24,6 +24,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import android.util.Log
 import okhttp3.Request
 import java.io.File
 
@@ -167,9 +168,8 @@ object AppUpdateChecker {
 
     /**
      * Streams the current update's APK into the app cache, reporting progress
-     * through [download]. A finished file survives a cancelled dialog: until
-     * the state is reset, "Install Now" comes straight back without a second
-     * download.
+     * through [download]. Verifies byte completeness and APK package integrity
+     * before declaring the download Ready for installation.
      */
     suspend fun downloadApk(context: Context): Unit = withContext(Dispatchers.IO) {
         val info = _available.value ?: return@withContext
@@ -195,6 +195,7 @@ object AppUpdateChecker {
                         var readTotal = 0L
                         while (true) {
                             if (downloadCancelled) {
+                                target.delete()
                                 _download.value = DownloadState.Idle
                                 return@withContext
                             }
@@ -207,9 +208,25 @@ object AppUpdateChecker {
                                     DownloadState.Downloading((readTotal.toFloat() / it).coerceIn(0f, 1f))
                             }
                         }
+                        output.flush()
+                        if (total != null && total > 0 && readTotal < total) {
+                            target.delete()
+                            error("Download was interrupted: received $readTotal of $total bytes")
+                        }
                     }
                 }
             }
+
+            // Verify file integrity: ensure file exists, non-empty, and parses as a valid Android package archive
+            if (!target.exists() || target.length() == 0L) {
+                error("Downloaded APK file is empty")
+            }
+            val pkgInfo = context.packageManager.getPackageArchiveInfo(target.absolutePath, 0)
+            if (pkgInfo == null) {
+                target.delete()
+                error("Downloaded package is corrupted or incomplete. Please download again.")
+            }
+
             _download.value = DownloadState.Ready(target)
         }.onFailure { error ->
             _download.value = if (downloadCancelled) {
@@ -231,13 +248,16 @@ object AppUpdateChecker {
     }
 
     /**
-     * Hands a downloaded APK to the system installer.
-     *
-     * Sideloaded apps need the user's blessing per app ("install unknown apps");
-     * without it the installer intent silently does nothing on most ROMs, so
-     * the user is sent to that one switch first and taps Install again after.
+     * Hands a downloaded APK to the system installer using standard ACTION_VIEW intent
+     * and explicit URI permissions to guarantee compatibility across all modern Android versions
+     * and OEM package managers.
      */
     fun installApk(context: Context, file: File) {
+        if (!file.exists() || file.length() == 0L) {
+            Log.e("AppUpdateChecker", "Cannot install: APK missing or empty")
+            return
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             !context.packageManager.canRequestPackageInstalls()
         ) {
@@ -248,21 +268,43 @@ object AppUpdateChecker {
             )
             return
         }
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        context.startActivity(
-            Intent(Intent.ACTION_INSTALL_PACKAGE)
-                .setDataAndType(uri, "application/vnd.android.package-archive")
-                .putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
-                .putExtra(Intent.EXTRA_RETURN_RESULT, true)
-                .addFlags(
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                        Intent.FLAG_ACTIVITY_NEW_TASK,
-                ),
-        )
+
+        try {
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+
+            // Explicitly grant read URI permission to package installer handlers
+            val resolveInfoList = context.packageManager.queryIntentActivities(
+                intent,
+                PackageManager.MATCH_DEFAULT_ONLY,
+            )
+            for (resolveInfo in resolveInfoList) {
+                val pkgName = resolveInfo.activityInfo.packageName
+                context.grantUriPermission(pkgName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e("AppUpdateChecker", "ACTION_VIEW install failed, attempting ACTION_INSTALL_PACKAGE fallback", e)
+            runCatching {
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val fallback = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(fallback)
+            }
+        }
     }
 
     /** Numeric, dot-separated comparison — "1.10" outranks "1.9". */
-    private fun isNewer(latest: String, current: String): Boolean {
+    fun isNewer(latest: String, current: String): Boolean {
         val l = latest.removePrefix("v").substringBefore("-").split(".").map { it.toIntOrNull() ?: 0 }
         val c = current.removePrefix("v").substringBefore("-").split(".").map { it.toIntOrNull() ?: 0 }
         for (i in 0 until maxOf(l.size, c.size)) {

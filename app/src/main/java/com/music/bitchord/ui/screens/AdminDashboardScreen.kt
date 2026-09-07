@@ -127,6 +127,8 @@ fun AdminDashboardScreen(
     var announcementSent by remember { mutableStateOf(false) }
     var announcementType by remember { mutableStateOf("GENERAL") }
     var isTargetedSend by remember { mutableStateOf(false) }
+    var onlyNonUpdatedAudience by remember { mutableStateOf(false) }
+    var targetVersionForBroadcast by remember { mutableStateOf<String?>(null) }
     var targetUserId by remember { mutableStateOf("") }
     var targetUserEmail by remember { mutableStateOf("") }
     var showUserPicker by remember { mutableStateOf(false) }
@@ -613,11 +615,48 @@ fun AdminDashboardScreen(
                     // Enhanced Announcement & Notification Center
                     val notificationTypes = listOf(
                         "GENERAL" to "📢 General",
+                        "FESTIVAL_WISH" to "🪔 Festivals",
+                        "ROMANTIC_VIBES" to "💖 Romantic",
+                        "APP_UPDATE" to "🚀 App Update",
+                        "MOTIVATION" to "⚡ Motivation",
+                        "AI_PICKS" to "✨ AI Picks",
                         "WISH" to "🎉 Wish/Greet",
                         "ALERT" to "🚨 Alert",
-                        "PROMO" to "🎁 Promo",
-                        "UPDATE" to "🔔 Update",
                     )
+
+                    var selectedPresetTab by remember { mutableStateOf("FESTIVALS") }
+
+                    val presets = remember {
+                        listOf(
+                            // Festivals
+                            Triple("Diwali 🪔", "🪔 Happy Diwali from VibeWave!", "May the festival of lights illuminate your life with joy, prosperity, and melodious beats! Keep rocking on VibeWave ✨🪔") to ("FESTIVALS" to "FESTIVAL_WISH"),
+                            Triple("Eid 🌙", "🌙 Eid Mubarak from VibeWave!", "Wishing you and your loved ones abundant peace, happiness, and harmonious melodies on this blessed day! 🌙💫") to ("FESTIVALS" to "FESTIVAL_WISH"),
+                            Triple("Holi 🎨", "🎨 Happy Holi from VibeWave!", "Fill your world with vibrant colors of celebration and groove to electrifying festive tunes! 🌈🎵") to ("FESTIVALS" to "FESTIVAL_WISH"),
+                            Triple("Christmas 🎄", "🎄 Merry Christmas from VibeWave!", "Wishing you a warm, joyous season filled with smiles and your favorite holiday soundtracks! 🎅🎶") to ("FESTIVALS" to "FESTIVAL_WISH"),
+                            Triple("New Year ✨", "✨ Happy New Year 2026!", "Cheers to another year of unforgettable melodies, late-night acoustic sessions, and pure rhythm! 🥂🎉") to ("FESTIVALS" to "FESTIVAL_WISH"),
+                            Triple("Navratri 🌸", "🌸 Shubh Navratri!", "Celebrate the divine rhythms and dance along to energetic festive Garba melodies with VibeWave! 🥁💫") to ("FESTIVALS" to "FESTIVAL_WISH"),
+                            Triple("Independence Day 🇮🇳", "🇮🇳 Happy Independence Day!", "Celebrating the spirit of freedom, unity, and pride with patriotic melodies! Jai Hind! 🇮🇳✨") to ("FESTIVALS" to "FESTIVAL_WISH"),
+
+                            // Romantic & Late Night
+                            Triple("Late Night Acoustics 🌙", "🌙 Late Night Acoustics for You", "Deep thoughts or quiet moments? Put on your headphones and let these gentle melodies keep you company 💕") to ("ROMANTIC" to "ROMANTIC_VIBES"),
+                            Triple("Monsoon Romance 🌧️", "🌧️ Rainy Day Romantic Melodies", "Hot coffee, raindrops tapping on the glass, and heartfelt acoustic chords. Tap to immerse ☕☔") to ("ROMANTIC" to "ROMANTIC_VIBES"),
+                            Triple("Special Someone ❤️", "❤️ For Someone Special", "When words fall short, melody speaks. Dedicate a song to the one who makes your heart flutter ✨") to ("ROMANTIC" to "ROMANTIC_VIBES"),
+                            Triple("Midnight Serenade 💌", "💌 Midnight Serenade", "A soothing romantic mix curated especially for late-night dreamers and starry souls 🎧💫") to ("ROMANTIC" to "ROMANTIC_VIBES"),
+                            Triple("Nostalgic Love 🍂", "🍂 Nostalgic Love Chords", "Relive your sweetest memories with timeless golden melodies that never fade 💖") to ("ROMANTIC" to "ROMANTIC_VIBES"),
+
+                            // Updates
+                            Triple("v1.5.5 Ready 🚀", "🚀 Fresh VibeWave v1.5.5 Ready!", "A faster release with categorized settings, deep AI Picks tracking, and sleek UI. Tap to install now! ⚡") to ("UPDATES" to "APP_UPDATE"),
+                            Triple("Performance Boost ⚡", "⚡ Performance & Stability Update v1.5.5", "Resolved update loops, enhanced audio precision, and updated music engine. Tap to update with 1 click!") to ("UPDATES" to "APP_UPDATE"),
+
+                            // Motivation & Chill
+                            Triple("Morning Surge ⚡", "⚡ Good Morning! Energy Surge", "Kick off your day with unstoppable momentum and high-vibe tunes! ☀️🚀") to ("MOTIVATION" to "MOTIVATION"),
+                            Triple("Weekend Chill 🍃", "🍃 Weekend Chillout Session", "Unwind, breathe easy, and let the acoustic breeze wash away the week's tension 🏖️🎵") to ("MOTIVATION" to "GENERAL"),
+                            Triple("Workout Fuel 🔥", "🔥 Workout Beast Mode", "Pump up the volume and crush your fitness goals with relentless rhythm! 🥊💪") to ("MOTIVATION" to "MOTIVATION"),
+
+                            // AI Picks
+                            Triple("AI Picks Refreshed ✨", "✨ Your AI Picks Just Got Smarter!", "Based on what you've been playing and liking, AI has tuned your personal picks playlist with fresh hidden gems! Tap to listen 🎶") to ("AI_PICKS" to "AI_PICKS"),
+                        )
+                    }
 
                     androidx.compose.foundation.lazy.LazyColumn(
                         modifier = Modifier
@@ -632,10 +671,122 @@ fun AdminDashboardScreen(
                                 color = Color.White,
                             )
                             Text(
-                                text = "Send notifications to all users or a specific individual.",
+                                text = "Broadcast festival greetings, romantic vibes, and updates with 1 tap.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(alpha = 0.6f),
                             )
+                        }
+
+                        // 1-Tap Quick Presets Section
+                        item {
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xFF1E2030),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = "⚡ 1-Tap Quick Presets",
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = Color.White,
+                                        )
+                                        Text(
+                                            text = "Tap any to autofill",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFF00CEC9),
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Category tabs for presets
+                                    val presetCategories = listOf(
+                                        "FESTIVALS" to "🪔 Festivals",
+                                        "ROMANTIC" to "💖 Romantic",
+                                        "UPDATES" to "🚀 Updates",
+                                        "MOTIVATION" to "⚡ Motivation",
+                                        "AI_PICKS" to "✨ AI Picks",
+                                    )
+                                    androidx.compose.foundation.lazy.LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    ) {
+                                        items(presetCategories) { (catKey, catLabel) ->
+                                            val isSelected = selectedPresetTab == catKey
+                                            Surface(
+                                                shape = RoundedCornerShape(16.dp),
+                                                color = if (isSelected) Color(0xFF6C5CE7) else Color(0xFF252736),
+                                                modifier = Modifier.clickable { selectedPresetTab = catKey },
+                                            ) {
+                                                Text(
+                                                    text = catLabel,
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                    ),
+                                                    color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    // Filtered presets for selected category
+                                    val currentCategoryPresets = remember(selectedPresetTab) {
+                                        presets.filter { it.second.first == selectedPresetTab }
+                                    }
+
+                                    androidx.compose.foundation.lazy.LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        items(currentCategoryPresets) { (presetData, meta) ->
+                                            val (chipTitle, title, body) = presetData
+                                            val (_, type) = meta
+                                            val isCurrent = announcementTitle == title
+                                            Surface(
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = if (isCurrent) Color(0xFF6C5CE7).copy(alpha = 0.25f) else Color(0xFF262838),
+                                                border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF6C5CE7)) else null,
+                                                modifier = Modifier
+                                                    .width(220.dp)
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .clickable {
+                                                        announcementTitle = title
+                                                        announcementBody = body
+                                                        announcementType = type
+                                                        if (type == "APP_UPDATE") {
+                                                            onlyNonUpdatedAudience = true
+                                                            targetVersionForBroadcast = "1.5.5"
+                                                        } else {
+                                                            onlyNonUpdatedAudience = false
+                                                        }
+                                                    },
+                                            ) {
+                                                Column(modifier = Modifier.padding(10.dp)) {
+                                                    Text(
+                                                        text = chipTitle,
+                                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                                        color = if (isCurrent) Color(0xFF81ECEC) else Color.White,
+                                                        maxLines = 1,
+                                                    )
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    Text(
+                                                        text = body,
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                                        color = Color.White.copy(alpha = 0.65f),
+                                                        maxLines = 2,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         item {
@@ -647,7 +798,7 @@ fun AdminDashboardScreen(
                             ) {
                                 Column(modifier = Modifier.padding(14.dp)) {
                                     Text(
-                                        text = "Notification Type",
+                                        text = "Notification Category",
                                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                         color = Color.White,
                                     )
@@ -678,7 +829,7 @@ fun AdminDashboardScreen(
                         }
 
                         item {
-                            // Audience Selector (Global vs Targeted)
+                            // Audience Selector (Global vs Non-Updated vs Targeted)
                             Surface(
                                 shape = RoundedCornerShape(14.dp),
                                 color = Color(0xFF1E2030),
@@ -686,32 +837,82 @@ fun AdminDashboardScreen(
                             ) {
                                 Column(modifier = Modifier.padding(14.dp)) {
                                     Text(
-                                        text = "Audience",
+                                        text = "Target Audience",
                                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                         color = Color.White,
                                     )
                                     Spacer(modifier = Modifier.height(10.dp))
-                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                        listOf(false to "🌍 All Users", true to "👤 Specific User").forEach { (targeted, label) ->
-                                            val selected = isTargetedSend == targeted
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        val audienceModes = listOf(
+                                            "ALL" to "🌍 All Users",
+                                            "NON_UPDATED" to "🚀 Non-Updated (< v1.5.5)",
+                                            "SPECIFIC" to "👤 Specific User",
+                                        )
+                                        audienceModes.forEach { (mode, label) ->
+                                            val isSelected = when (mode) {
+                                                "ALL" -> !isTargetedSend && !onlyNonUpdatedAudience
+                                                "NON_UPDATED" -> !isTargetedSend && onlyNonUpdatedAudience
+                                                "SPECIFIC" -> isTargetedSend
+                                                else -> false
+                                            }
                                             Surface(
                                                 shape = RoundedCornerShape(20.dp),
-                                                color = if (selected) Color(0xFF00CEC9) else Color(0xFF2A2D3E),
+                                                color = if (isSelected) Color(0xFF00CEC9) else Color(0xFF2A2D3E),
                                                 modifier = Modifier.clickable {
-                                                    isTargetedSend = targeted
-                                                    if (!targeted) {
-                                                        targetUserId = ""
-                                                        targetUserEmail = ""
+                                                    when (mode) {
+                                                        "ALL" -> {
+                                                            isTargetedSend = false
+                                                            onlyNonUpdatedAudience = false
+                                                            targetUserId = ""
+                                                            targetUserEmail = ""
+                                                        }
+                                                        "NON_UPDATED" -> {
+                                                            isTargetedSend = false
+                                                            onlyNonUpdatedAudience = true
+                                                            targetVersionForBroadcast = "1.5.5"
+                                                            targetUserId = ""
+                                                            targetUserEmail = ""
+                                                        }
+                                                        "SPECIFIC" -> {
+                                                            isTargetedSend = true
+                                                            onlyNonUpdatedAudience = false
+                                                        }
                                                     }
                                                 },
                                             ) {
                                                 Text(
                                                     text = label,
                                                     style = MaterialTheme.typography.labelMedium.copy(
-                                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                                     ),
-                                                    color = if (selected) Color(0xFF0F1018) else Color.White.copy(alpha = 0.7f),
-                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                                    color = if (isSelected) Color(0xFF0F1018) else Color.White.copy(alpha = 0.7f),
+                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    if (onlyNonUpdatedAudience) {
+                                        val nonUpdatedCount = remember(users) {
+                                            users.count { com.music.bitchord.data.AppUpdateChecker.isNewer("1.5.5", it.appVersion.removePrefix("v")) }
+                                        }
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = Color(0xFF00CEC9).copy(alpha = 0.12f),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 10.dp),
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(10.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Icon(Icons.Rounded.Upgrade, contentDescription = null, tint = Color(0xFF00CEC9), modifier = Modifier.size(18.dp))
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = "Smart Target: Only users on older versions (< v1.5.5) will receive this alert ($nonUpdatedCount users). Updated users will be excluded.",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = Color(0xFF81ECEC),
                                                 )
                                             }
                                         }
@@ -789,7 +990,7 @@ fun AdminDashboardScreen(
                                                                     color = Color.White,
                                                                 )
                                                                 Text(
-                                                                    text = user.email,
+                                                                    text = "${user.email} • v${user.appVersion}",
                                                                     style = MaterialTheme.typography.labelSmall,
                                                                     color = Color(0xFF81ECEC),
                                                                 )
@@ -864,6 +1065,7 @@ fun AdminDashboardScreen(
                                 isSendingAnnouncement -> "Sending..."
                                 isTargetedSend && targetUserId.isNotBlank() -> "📨 Send to ${targetUserEmail.take(20)}..."
                                 isTargetedSend -> "Select a user first"
+                                onlyNonUpdatedAudience -> "🚀 Alert Non-Updated Users Only (< v1.5.5)"
                                 else -> "📢 Broadcast to All Users"
                             }
                             val canSend = announcementTitle.isNotBlank() && announcementBody.isNotBlank() &&
@@ -880,6 +1082,8 @@ fun AdminDashboardScreen(
                                                 type = announcementType,
                                                 targetUserId = if (isTargetedSend) targetUserId else null,
                                                 targetUserEmail = if (isTargetedSend) targetUserEmail else null,
+                                                targetVersion = if (onlyNonUpdatedAudience || announcementType == "APP_UPDATE") (targetVersionForBroadcast ?: "1.5.5") else null,
+                                                onlyNonUpdated = onlyNonUpdatedAudience || announcementType == "APP_UPDATE",
                                             )
                                             isSendingAnnouncement = false
                                             if (success) {
@@ -917,9 +1121,9 @@ fun AdminDashboardScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     Text(
-                                        text = "✅ Notification sent successfully via Firestore!",
+                                        text = "✅ Notification broadcasted successfully via Firestore!",
                                         color = Color(0xFF00B894),
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
                                         modifier = Modifier.padding(12.dp),
                                     )
                                 }
@@ -1075,25 +1279,30 @@ fun AdminDashboardScreen(
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text(
-                                        text = "Broadcast Update Notification",
+                                        text = "Smart Broadcast Update Notification",
                                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                         color = Color.White,
                                     )
+                                    val targetVer = updateInfo?.version ?: BuildConfig.VERSION_NAME
+                                    val nonUpdatedCount = remember(users, targetVer) {
+                                        users.count { com.music.bitchord.data.AppUpdateChecker.isNewer(targetVer, it.appVersion.removePrefix("v")) }
+                                    }
                                     Text(
-                                        text = "Send an instant update alert to all VibeWave users with direct in-app install action.",
+                                        text = "Smart Delivery: Only non-updated devices (< v$targetVer) receive this notification ($nonUpdatedCount users). Users already running v$targetVer are automatically excluded.",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color.White.copy(alpha = 0.6f),
+                                        color = Color(0xFF81ECEC),
                                         modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
                                     )
 
                                     Button(
                                         onClick = {
                                             scope.launch {
-                                                val targetVer = updateInfo?.version ?: BuildConfig.VERSION_NAME
                                                 AdminManager.sendAnnouncement(
                                                     title = "New VibeWave Update v$targetVer Ready! 🚀",
                                                     message = "A fresh update is available! Tap here to view the full changelog and install it directly in the app.",
-                                                    type = "APP_UPDATE"
+                                                    type = "APP_UPDATE",
+                                                    targetVersion = targetVer,
+                                                    onlyNonUpdated = true,
                                                 )
                                                 updateBroadcastSent = true
                                             }
@@ -1103,7 +1312,7 @@ fun AdminDashboardScreen(
                                     ) {
                                         Icon(Icons.Rounded.Upgrade, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Alert All Users About Update 🚀")
+                                        Text("Alert Non-Updated Users (< v$targetVer) 🚀")
                                     }
 
                                     if (updateBroadcastSent) {
@@ -1114,7 +1323,7 @@ fun AdminDashboardScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                         ) {
                                             Text(
-                                                text = "✅ Update notification broadcasted to all users!",
+                                                text = "✅ Update notification broadcasted to non-updated users (< v$targetVer)!",
                                                 color = Color(0xFF00B894),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 modifier = Modifier.padding(10.dp),

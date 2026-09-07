@@ -43,10 +43,12 @@ object AnnouncementManager {
         val id: String = UUID.randomUUID().toString(),
         val title: String = "",
         val message: String = "",
-        val type: String = "GENERAL", // GENERAL, FESTIVAL_WISH, BIRTHDAY_WISH, MUSIC_RECOMMENDATION, APP_UPDATE, PERSONAL_WISH
+        val type: String = "GENERAL", // GENERAL, FESTIVAL_WISH, ROMANTIC_VIBES, BIRTHDAY_WISH, MUSIC_RECOMMENDATION, APP_UPDATE, PERSONAL_WISH, MOTIVATION, AI_PICKS
         val author: String = "Raj Mishra (Admin)",
         val targetUserId: String? = null,
         val targetUserEmail: String? = null,
+        val targetVersion: String? = null,
+        val onlyNonUpdated: Boolean = false,
         val timestamp: Long = System.currentTimeMillis(),
         val read: Boolean = false,
     ) {
@@ -58,16 +60,21 @@ object AnnouncementManager {
             "author" to author,
             "targetUserId" to targetUserId,
             "targetUserEmail" to targetUserEmail,
+            "targetVersion" to targetVersion,
+            "onlyNonUpdated" to onlyNonUpdated,
             "timestamp" to timestamp,
             "read" to read,
         )
 
         fun getEmoji(): String = when (type.uppercase()) {
-            "FESTIVAL_WISH" -> "🎊"
+            "FESTIVAL_WISH" -> "🪔"
+            "ROMANTIC_VIBES" -> "💖"
             "BIRTHDAY_WISH" -> "🎂"
             "MUSIC_RECOMMENDATION" -> "🎵"
             "APP_UPDATE" -> "🚀"
-            "PERSONAL_WISH" -> "💖"
+            "PERSONAL_WISH" -> "💌"
+            "MOTIVATION" -> "⚡"
+            "AI_PICKS" -> "✨"
             else -> "📢"
         }
     }
@@ -147,6 +154,8 @@ object AnnouncementManager {
                             message = doc.getString("message") ?: "",
                             type = doc.getString("type") ?: "GENERAL",
                             author = doc.getString("author") ?: "Raj Mishra (Admin)",
+                            targetVersion = doc.getString("targetVersion"),
+                            onlyNonUpdated = doc.getBoolean("onlyNonUpdated") ?: false,
                             timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis(),
                         )
 
@@ -194,6 +203,8 @@ object AnnouncementManager {
                             author = doc.getString("author") ?: "Raj Mishra (Admin)",
                             targetUserId = uid,
                             targetUserEmail = email,
+                            targetVersion = doc.getString("targetVersion"),
+                            onlyNonUpdated = doc.getBoolean("onlyNonUpdated") ?: false,
                             timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis(),
                         )
 
@@ -204,6 +215,21 @@ object AnnouncementManager {
     }
 
     private fun handleNewAnnouncement(context: Context, announcement: Announcement) {
+        // If this announcement is for app updates or non-updated users only:
+        // check whether the current device is already on or past the target version.
+        if (announcement.type.equals("APP_UPDATE", ignoreCase = true) || announcement.onlyNonUpdated) {
+            val currentVersion = com.music.bitchord.BuildConfig.VERSION_NAME.removePrefix("v")
+            val targetVersion = announcement.targetVersion
+                ?: extractVersion(announcement.title)
+                ?: extractVersion(announcement.message)
+                ?: "1.5.5"
+
+            if (!com.music.bitchord.data.AppUpdateChecker.isNewer(targetVersion, currentVersion)) {
+                Log.d(TAG, "User already on $currentVersion >= $targetVersion. Suppressing update broadcast.")
+                return
+            }
+        }
+
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val lastSeen = prefs.getLong(KEY_LAST_SEEN_TIME, 0L)
 
@@ -221,9 +247,15 @@ object AnnouncementManager {
                 title = announcement.title,
                 message = announcement.message,
                 type = announcement.type,
-                author = announcement.author
+                author = announcement.author,
+                isUpdate = announcement.type.equals("APP_UPDATE", ignoreCase = true),
             )
         }
+    }
+
+    private fun extractVersion(text: String): String? {
+        val match = Regex("""v?(\d+\.\d+(\.\d+)?)""").find(text)
+        return match?.groupValues?.get(1)
     }
 
     fun dismissCurrentAnnouncement() {

@@ -198,6 +198,8 @@ object AdminManager {
         type: String = "GENERAL",
         targetUserId: String? = null,
         targetUserEmail: String? = null,
+        targetVersion: String? = null,
+        onlyNonUpdated: Boolean = false,
     ): Boolean = withContext(Dispatchers.IO) {
         try {
             val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext false
@@ -210,6 +212,8 @@ object AdminManager {
                 author = "Raj Mishra (Admin)",
                 targetUserId = targetUserId,
                 targetUserEmail = targetUserEmail,
+                targetVersion = targetVersion,
+                onlyNonUpdated = onlyNonUpdated,
                 timestamp = System.currentTimeMillis(),
             )
 
@@ -228,7 +232,7 @@ object AdminManager {
                     .document(id)
                     .set(announcement.toMap())
                     .await()
-                Log.d(TAG, "Global broadcast announcement published: $title")
+                Log.d(TAG, "Global broadcast announcement published: $title (targetVersion: $targetVersion, onlyNonUpdated: $onlyNonUpdated)")
             }
             true
         } catch (t: Throwable) {
@@ -242,10 +246,10 @@ object AdminManager {
             try {
                 val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext emptyList()
                 val snapshot = db.collection("announcements")
-                    .orderBy("timestamp", Query.Direction.DESCENDING)
-                    .limit(limit)
-                    .get()
-                    .await()
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(limit)
+                .get()
+                .await()
 
                 snapshot.documents.mapNotNull { doc ->
                     AnnouncementManager.Announcement(
@@ -254,6 +258,8 @@ object AdminManager {
                         message = doc.getString("message") ?: "",
                         type = doc.getString("type") ?: "GENERAL",
                         author = doc.getString("author") ?: "Raj Mishra (Admin)",
+                        targetVersion = doc.getString("targetVersion"),
+                        onlyNonUpdated = doc.getBoolean("onlyNonUpdated") ?: false,
                         timestamp = doc.getLong("timestamp") ?: 0L,
                     )
                 }
