@@ -843,9 +843,10 @@ fun AdminDashboardScreen(
                                     )
                                     Spacer(modifier = Modifier.height(10.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        val currentAppVer = BuildConfig.VERSION_NAME
                                         val audienceModes = listOf(
                                             "ALL" to "🌍 All Users",
-                                            "NON_UPDATED" to "🚀 Non-Updated (< v1.5.5)",
+                                            "NON_UPDATED" to "🚀 Non-Updated (< v$currentAppVer)",
                                             "SPECIFIC" to "👤 Specific User",
                                         )
                                         audienceModes.forEach { (mode, label) ->
@@ -869,7 +870,7 @@ fun AdminDashboardScreen(
                                                         "NON_UPDATED" -> {
                                                             isTargetedSend = false
                                                             onlyNonUpdatedAudience = true
-                                                            targetVersionForBroadcast = "1.5.5"
+                                                            targetVersionForBroadcast = currentAppVer
                                                             targetUserId = ""
                                                             targetUserEmail = ""
                                                         }
@@ -893,8 +894,9 @@ fun AdminDashboardScreen(
                                     }
 
                                     if (onlyNonUpdatedAudience) {
-                                        val nonUpdatedCount = remember(users) {
-                                            users.count { com.music.bitchord.data.AppUpdateChecker.isNewer("1.5.5", it.appVersion.removePrefix("v")) }
+                                        val currentAppVer = BuildConfig.VERSION_NAME
+                                        val nonUpdatedCount = remember(users, currentAppVer) {
+                                            users.count { com.music.bitchord.data.AppUpdateChecker.isNewer(currentAppVer, it.appVersion.removePrefix("v")) }
                                         }
                                         Surface(
                                             shape = RoundedCornerShape(10.dp),
@@ -910,7 +912,7 @@ fun AdminDashboardScreen(
                                                 Icon(Icons.Rounded.Upgrade, contentDescription = null, tint = Color(0xFF00CEC9), modifier = Modifier.size(18.dp))
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Text(
-                                                    text = "Smart Target: Only users on older versions (< v1.5.5) will receive this alert ($nonUpdatedCount users). Updated users will be excluded.",
+                                                    text = "Smart Target: Only users on older versions (< v$currentAppVer) will receive this alert ($nonUpdatedCount users). Updated users will be excluded.",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = Color(0xFF81ECEC),
                                                 )
@@ -1065,7 +1067,7 @@ fun AdminDashboardScreen(
                                 isSendingAnnouncement -> "Sending..."
                                 isTargetedSend && targetUserId.isNotBlank() -> "📨 Send to ${targetUserEmail.take(20)}..."
                                 isTargetedSend -> "Select a user first"
-                                onlyNonUpdatedAudience -> "🚀 Alert Non-Updated Users Only (< v1.5.5)"
+                                onlyNonUpdatedAudience -> "🚀 Alert Non-Updated Users Only (< v${BuildConfig.VERSION_NAME})"
                                 else -> "📢 Broadcast to All Users"
                             }
                             val canSend = announcementTitle.isNotBlank() && announcementBody.isNotBlank() &&
@@ -1082,7 +1084,7 @@ fun AdminDashboardScreen(
                                                 type = announcementType,
                                                 targetUserId = if (isTargetedSend) targetUserId else null,
                                                 targetUserEmail = if (isTargetedSend) targetUserEmail else null,
-                                                targetVersion = if (onlyNonUpdatedAudience || announcementType == "APP_UPDATE") (targetVersionForBroadcast ?: "1.5.5") else null,
+                                                targetVersion = if (onlyNonUpdatedAudience || announcementType == "APP_UPDATE") (targetVersionForBroadcast ?: BuildConfig.VERSION_NAME) else null,
                                                 onlyNonUpdated = onlyNonUpdatedAudience || announcementType == "APP_UPDATE",
                                             )
                                             isSendingAnnouncement = false

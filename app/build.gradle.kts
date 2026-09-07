@@ -45,8 +45,8 @@ android {
         // Haze falls back to a translucent scrim below that.
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "1.5.5"
+        versionCode = 19
+        versionName = "1.5.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -79,7 +79,7 @@ android {
         create("dev") {
             dimension = "env"
             applicationId = "com.vibewave.music"
-            resValue("string", "app_name", "VibeWave Dev")
+            resValue("string", "app_name", "VibeWave")
         }
         create("prod") {
             dimension = "env"
@@ -109,6 +109,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Sign debug with release keystore if available so local and release APKs share
+            // the exact same signature and can overwrite/update each other without OS errors.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+        }
         release {
             /*
              * Off deliberately. Stream resolution runs YouTube's own player

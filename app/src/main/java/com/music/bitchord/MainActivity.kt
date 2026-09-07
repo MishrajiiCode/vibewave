@@ -213,6 +213,8 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import com.music.bitchord.ui.screens.SplashScreen
 import java.util.Locale
 
 /** A full first screen of a native YouTube Music radio before AutoPlay tops it up. */
@@ -294,6 +296,20 @@ class MainActivity : AppCompatActivity() {
                 // the split is about to be laid out in.
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     BitChordApp(darkTheme = darkTheme, windowWidth = maxWidth, appBackdrop = appBackdrop)
+
+                    // 3-second animated Splash Screen on app launch
+                    var showSplash by remember { mutableStateOf(true) }
+                    LaunchedEffect(Unit) {
+                        delay(3000L)
+                        showSplash = false
+                    }
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showSplash,
+                        enter = fadeIn(),
+                        exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(500)),
+                    ) {
+                        SplashScreen()
+                    }
                 }
                 }
             }

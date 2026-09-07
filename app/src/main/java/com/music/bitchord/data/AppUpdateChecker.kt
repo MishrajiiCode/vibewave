@@ -103,12 +103,13 @@ object AppUpdateChecker {
             return """
                 ### 🚀 What's New in VibeWave v$version
 
-                - 🎨 **Minimalist Spotify & JioSaavn Hybrid Icon**: Sleek modern design featuring circular disc geometry and curved acoustic arcs on deep obsidian (no soundwave clutter).
-                - 🧠 **Smart AI Integration & AI Picks**: Real-time activity tracking based on what you play and like. Dynamically generates smart playlists and curates your **AI Picks** folder.
-                - ⚙️ **Categorized & Organized Settings**: Modular category navigation (Audio & Stream, Playback, Appearance, Downloads & Storage, Account & Backup, Admin & Dev).
-                - 👑 **Structured Admin Telemetry Audit**: Detailed hardware, battery, OS, permission matrix, and location footprints formatted into organized cards.
-                - ✉️ **Direct Personalized Messaging**: Direct custom notifications sent from Admin to user with instant heads-up system tray alerts.
-                - ⚡ **Direct In-App Updates**: One-tap architecture-specific APK downloads and direct package installation.
+                - 🎨 **New Modern Visual Emblem**: Sleek playback & acoustic bars design on a smooth pastel disc with unified "VibeWave" branding.
+                - ⏱️ **3-Second Animated Splash Screen**: Brand-new cold start experience featuring pulsing audio visualizers, glowing logo animations, and smooth app transitions.
+                - ⚡ **Direct Seamless Installation**: APK downloads now automatically launch the Android package installer immediately upon 100% verification — no repeated prompts or stuck downloads.
+                - 🎯 **Smart Update Alerts**: Broadcast updates now only alert devices running older versions (< v$version). Updated devices are never disturbed.
+                - 🪔 **1-Tap Festival & Romantic Broadcast Presets**: Instant push notifications for all major festivals (Diwali, Eid, Holi, Christmas, New Year, Navratri) and romantic evening vibes.
+                - 🧠 **Smart AI Integration & AI Picks**: Real-time listening habit tracking with auto-generated dynamic playlists in your Library.
+                - ⚙️ **Categorized & Organized Settings**: 7 modular setting categories for quick, uncluttered navigation.
             """.trimIndent()
         }
         return rawNotes ?: ""
@@ -150,17 +151,14 @@ object AppUpdateChecker {
         val matchedAsset = assets.firstOrNull { asset ->
             val name = asset["name"]?.jsonPrimitive?.contentOrNull ?: ""
             name.endsWith(".apk", ignoreCase = true) &&
-                name.contains(preferredKeyword, ignoreCase = true) &&
-                asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
+                name.contains(preferredKeyword, ignoreCase = true)
         } ?: assets.firstOrNull { asset ->
             val name = asset["name"]?.jsonPrimitive?.contentOrNull ?: ""
             name.endsWith(".apk", ignoreCase = true) &&
-                name.contains("universal", ignoreCase = true) &&
-                asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
+                name.contains("universal", ignoreCase = true)
         } ?: assets.firstOrNull { asset ->
             val name = asset["name"]?.jsonPrimitive?.contentOrNull ?: ""
-            name.endsWith(".apk", ignoreCase = true) &&
-                asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
+            name.endsWith(".apk", ignoreCase = true)
         }
 
         matchedAsset?.get("browser_download_url")?.jsonPrimitive?.contentOrNull
@@ -228,6 +226,10 @@ object AppUpdateChecker {
             }
 
             _download.value = DownloadState.Ready(target)
+            // Seamless flow: automatically launch package installer immediately upon download completion
+            withContext(Dispatchers.Main) {
+                installApk(context, target)
+            }
         }.onFailure { error ->
             _download.value = if (downloadCancelled) {
                 DownloadState.Idle
