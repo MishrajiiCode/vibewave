@@ -11,7 +11,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -216,16 +218,27 @@ fun FrostedTopBar(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     if (onCommunityClick != null) {
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = Color(0xFF6C5CE7).copy(alpha = 0.22f),
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
-                                .clickable { onCommunityClick() },
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(Color(0xFF6C5CE7).copy(alpha = 0.35f), Color(0xFF00CEC9).copy(alpha = 0.20f))
+                                    )
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    brush = Brush.linearGradient(
+                                        listOf(Color(0xFF00CEC9).copy(alpha = 0.6f), Color(0xFF6C5CE7).copy(alpha = 0.4f))
+                                    ),
+                                    shape = RoundedCornerShape(16.dp),
+                                )
+                                .clickable { onCommunityClick() }
+                                .padding(horizontal = 9.dp, vertical = 4.5.dp),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
@@ -234,14 +247,14 @@ fun FrostedTopBar(
                                     tint = Color(0xFF81ECEC),
                                     modifier = Modifier.size(14.dp),
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(4.5.dp))
                                 Text(
                                     text = "Community",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp,
+                                        fontSize = 11.5.sp,
                                     ),
-                                    color = Color(0xFF81ECEC),
+                                    color = Color.White,
                                 )
                             }
                         }

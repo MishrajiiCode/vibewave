@@ -60,6 +60,7 @@ import androidx.compose.material.icons.rounded.LocalOffer
 import androidx.compose.material.icons.rounded.MusicOff
 import androidx.compose.material.icons.rounded.MotionPhotosOff
 import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.SignalCellularAlt
@@ -185,6 +186,7 @@ fun SettingsScreen(
     onAppLanguage: () -> Unit,
     onOpenAdmin: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
+    onOpenCommunity: () -> Unit = {},
     onOpenUpdateDialog: () -> Unit = {},
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -1217,6 +1219,13 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setShowLyricsLogs(!showLyricsLogs) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.Forum,
+                    title = "VibeWave Community & Private Chat",
+                    subtitle = "Join global discussions, write reviews and message friends 1-on-1",
+                    onClick = onOpenCommunity,
                 )
                 RowDivider()
                 SettingsRow(

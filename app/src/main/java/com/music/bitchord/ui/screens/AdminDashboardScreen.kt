@@ -1210,8 +1210,8 @@ fun AdminDashboardScreen(
                             Triple("Nostalgic Love 🍂", "🍂 Nostalgic Love Chords", "Relive your sweetest memories with timeless golden melodies that never fade 💖") to ("ROMANTIC" to "ROMANTIC_VIBES"),
 
                             // Updates
-                            Triple("v1.5.5 Ready 🚀", "🚀 Fresh VibeWave v1.5.5 Ready!", "A faster release with categorized settings, deep AI Picks tracking, and sleek UI. Tap to install now! ⚡") to ("UPDATES" to "APP_UPDATE"),
-                            Triple("Performance Boost ⚡", "⚡ Performance & Stability Update v1.5.5", "Resolved update loops, enhanced audio precision, and updated music engine. Tap to update with 1 click!") to ("UPDATES" to "APP_UPDATE"),
+                            Triple("v1.5.7 Ready 🚀", "🚀 Fresh VibeWave v1.5.7 Ready!", "Community chat, 5.5s splash, Advanced AI Studio & Cosmic UI now live! Tap to install immediately. ⚡") to ("UPDATES" to "APP_UPDATE"),
+                            Triple("Performance Boost ⚡", "⚡ Performance & Stability Update v1.5.7", "Resolved community visibility, added 1-on-1 private messaging, and enhanced AI engine. Tap to update!") to ("UPDATES" to "APP_UPDATE"),
 
                             // Motivation & Chill
                             Triple("Morning Surge ⚡", "⚡ Good Morning! Energy Surge", "Kick off your day with unstoppable momentum and high-vibe tunes! ☀️🚀") to ("MOTIVATION" to "MOTIVATION"),

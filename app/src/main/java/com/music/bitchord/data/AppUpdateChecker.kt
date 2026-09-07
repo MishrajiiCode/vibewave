@@ -103,13 +103,12 @@ object AppUpdateChecker {
             return """
                 ### 🚀 What's New in VibeWave v$version
 
-                - 🎨 **New Modern Visual Emblem**: Sleek playback & acoustic bars design on a smooth pastel disc with unified "VibeWave" branding.
-                - ⏱️ **3-Second Animated Splash Screen**: Brand-new cold start experience featuring pulsing audio visualizers, glowing logo animations, and smooth app transitions.
-                - ⚡ **Direct Seamless Installation**: APK downloads now automatically launch the Android package installer immediately upon 100% verification — no repeated prompts or stuck downloads.
-                - 🎯 **Smart Update Alerts**: Broadcast updates now only alert devices running older versions (< v$version). Updated devices are never disturbed.
-                - 🪔 **1-Tap Festival & Romantic Broadcast Presets**: Instant push notifications for all major festivals (Diwali, Eid, Holi, Christmas, New Year, Navratri) and romantic evening vibes.
-                - 🧠 **Smart AI Integration & AI Picks**: Real-time listening habit tracking with auto-generated dynamic playlists in your Library.
-                - ⚙️ **Categorized & Organized Settings**: 7 modular setting categories for quick, uncluttered navigation.
+                - 💬 **Live Community & WhatsApp-Style 1-on-1 Chat**: Post reviews, rate tracks, join global discussions, and message other users in private real-time chat.
+                - ⏱️ **5.5-Second Enhanced Splash Screen**: 7-bar harmonic audio equalizer, smooth loading progress bar, and 4-stage system initialization status readout.
+                - 🧠 **Advanced AI Neural Studio**: 13 curated acoustic modes, circadian rhythm harmony alignment, and real-time acoustic metrics breakdown (BPM, danceability, warmth).
+                - 🌌 **Cosmic Mesh AI Interface**: Deep multi-stop gradient ambient canvas with glassmorphic cards replacing the plain dark theme.
+                - 👑 **Architect Showcase & About Section**: Celebrating Raj Mishra's vision, with deep breakdowns of the Bit-Perfect Lossless Audio Pipeline and zero-API local AI engine.
+                - ⚡ **Direct Seamless Installation**: Instant one-tap update download and automatic package installer launch.
             """.trimIndent()
         }
         return rawNotes ?: ""

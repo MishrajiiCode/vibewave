@@ -1914,6 +1914,10 @@ private fun BitChordApp(
                                 showSettings = false
                                 showAboutDeveloper = true
                             },
+                            onOpenCommunity = {
+                                showSettings = false
+                                showCommunitySheet = true
+                            },
                             onOpenUpdateDialog = {
                                 showSettings = false
                                 showUpdateDialog = true
