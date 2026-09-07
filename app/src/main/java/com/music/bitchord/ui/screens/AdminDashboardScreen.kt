@@ -31,6 +31,21 @@ import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Upgrade
+import androidx.compose.material.icons.rounded.BatteryAlert
+import androidx.compose.material.icons.rounded.BatteryChargingFull
+import androidx.compose.material.icons.rounded.BatteryFull
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Email
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Memory
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.data.AppUpdateChecker
 import androidx.compose.material3.AlertDialog
@@ -99,6 +114,13 @@ fun AdminDashboardScreen(
     var selectedUserForDetail by remember { mutableStateOf<FirestoreManager.UserProfile?>(null) }
     var userActivities by remember { mutableStateOf<List<FirestoreManager.ActivityLog>>(emptyList()) }
     var isUserActivitiesLoading by remember { mutableStateOf(false) }
+
+    var userForPersonalMessage by remember { mutableStateOf<FirestoreManager.UserProfile?>(null) }
+    var personalMessageTitle by remember { mutableStateOf("") }
+    var personalMessageBody by remember { mutableStateOf("") }
+    var personalMessageType by remember { mutableStateOf("PERSONAL_WISH") }
+    var isSendingPersonalMessage by remember { mutableStateOf(false) }
+    var personalMessageSentConfirmation by remember { mutableStateOf(false) }
 
     var announcementTitle by remember { mutableStateOf("") }
     var announcementBody by remember { mutableStateOf("") }
@@ -428,37 +450,75 @@ fun AdminDashboardScreen(
 
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Row(
+                                        modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.LocationOn,
-                                                contentDescription = null,
-                                                tint = Color(0xFF00CEC9),
-                                                modifier = Modifier.size(14.dp),
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = user.currentLocation?.city?.ifBlank { "Unknown" } ?: "Not Set",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = Color.White.copy(alpha = 0.8f),
-                                            )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.LocationOn,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFF00CEC9),
+                                                    modifier = Modifier.size(13.dp),
+                                                )
+                                                Spacer(modifier = Modifier.width(3.dp))
+                                                Text(
+                                                    text = user.currentLocation?.city?.ifBlank { "Unknown" } ?: "Not Set",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = Color.White.copy(alpha = 0.8f),
+                                                )
+                                            }
+
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.PhoneAndroid,
+                                                    contentDescription = null,
+                                                    tint = Color.White.copy(alpha = 0.5f),
+                                                    modifier = Modifier.size(13.dp),
+                                                )
+                                                Spacer(modifier = Modifier.width(3.dp))
+                                                Text(
+                                                    text = user.deviceModel,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = Color.White.copy(alpha = 0.6f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                            }
                                         }
 
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.PhoneAndroid,
-                                                contentDescription = null,
-                                                tint = Color.White.copy(alpha = 0.5f),
-                                                modifier = Modifier.size(14.dp),
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = user.deviceModel,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = Color.White.copy(alpha = 0.6f),
-                                            )
+                                        // Quick Action Button: Message this user
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xFF6C5CE7).copy(alpha = 0.2f),
+                                            modifier = Modifier.clickable {
+                                                userForPersonalMessage = user
+                                                personalMessageTitle = ""
+                                                personalMessageBody = ""
+                                                personalMessageSentConfirmation = false
+                                            }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.Send,
+                                                    contentDescription = "Message",
+                                                    tint = Color(0xFFA29BFE),
+                                                    modifier = Modifier.size(11.dp)
+                                                )
+                                                Text(
+                                                    text = "Message",
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                    color = Color(0xFFA29BFE)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -1070,97 +1130,383 @@ fun AdminDashboardScreen(
         }
     }
 
-    // User Detail Modal
+    // Highly Structured User Audit Modal
     selectedUserForDetail?.let { user ->
+        val telem = user.telemetry
+        val taste = user.tasteProfile
+
         AlertDialog(
             onDismissRequest = { selectedUserForDetail = null },
             title = {
-                Text(text = "User Audit: ${user.name}", color = Color.White)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF6C5CE7).copy(alpha = 0.25f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = user.name.take(1).uppercase(),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFFA29BFE),
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = user.name.ifBlank { "User Audit" },
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = user.email,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF00CEC9),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+
+                    IconButton(onClick = { selectedUserForDetail = null }) {
+                        Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Color.White.copy(alpha = 0.6f))
+                    }
+                }
             },
             text = {
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    // 1. Direct Message Action Banner
                     item {
-                        Text(
-                            text = "Email: ${user.email}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF00CEC9),
-                        )
-                        Text(
-                            text = "Device: ${user.deviceModel} (App v${user.appVersion})",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f),
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // Location Audit
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFF232536),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF6C5CE7).copy(alpha = 0.15f),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text(
-                                    text = "📍 Latest Location:",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFF81ECEC),
-                                )
-                                user.currentLocation?.let { loc ->
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "${loc.city}, ${loc.state}, ${loc.country}\nCoordinates: (${loc.latitude}, ${loc.longitude})",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color.White,
+                                        text = "Send Direct Message ✉️",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color(0xFFA29BFE),
                                     )
                                     Text(
-                                        text = "Recorded: ${formatTimestamp(loc.timestamp)}",
+                                        text = "Notification will pop up on ${user.name.split(" ").firstOrNull() ?: "user"}'s device",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White.copy(alpha = 0.5f),
+                                        color = Color.White.copy(alpha = 0.65f),
                                     )
-                                } ?: Text(
-                                    text = "No current location recorded.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.5f),
-                                )
+                                }
+                                Button(
+                                    onClick = {
+                                        userForPersonalMessage = user
+                                        personalMessageTitle = ""
+                                        personalMessageBody = ""
+                                        personalMessageSentConfirmation = false
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C5CE7)),
+                                    modifier = Modifier.padding(start = 8.dp),
+                                ) {
+                                    Icon(Icons.Rounded.Send, contentDescription = null, modifier = Modifier.size(13.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Compose", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                                }
+                            }
+                        }
+                    }
 
-                                Spacer(modifier = Modifier.height(10.dp))
+                    // 2. Battery & Power Status Card
+                    item {
+                        val batteryLevel = telem?.batteryPercentage ?: -1
+                        val isCharging = telem?.isCharging ?: false
+                        val battStatus = telem?.batteryStatus ?: "Unknown"
+                        val battHealth = telem?.batteryHealth ?: "Good"
+                        val battTemp = telem?.batteryTemperatureC ?: 0f
 
-                                Text(
-                                    text = "🕒 Previous Location:",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFFDFE6E9),
+                        val battColor = when {
+                            batteryLevel >= 50 -> Color(0xFF00B894)
+                            batteryLevel >= 20 -> Color(0xFFFDCB6E)
+                            batteryLevel >= 0 -> Color(0xFFFF7675)
+                            else -> Color.White.copy(alpha = 0.5f)
+                        }
+
+                        AuditSectionCard(
+                            title = "Power & Battery Telemetry",
+                            icon = if (isCharging) Icons.Rounded.BatteryChargingFull else Icons.Rounded.BatteryFull,
+                            iconTint = battColor,
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                AuditKeyValue(
+                                    label = "Battery Level",
+                                    value = if (batteryLevel >= 0) "$batteryLevel% ${if (isCharging) "⚡ Charging" else "🔋 On Battery"}" else "Unknown",
+                                    valueColor = battColor,
                                 )
-                                user.previousLocation?.let { prev ->
-                                    Text(
-                                        text = "${prev.city}, ${prev.state}, ${prev.country}\nCoordinates: (${prev.latitude}, ${prev.longitude})",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color.White,
-                                    )
-                                    Text(
-                                        text = "Recorded: ${formatTimestamp(prev.timestamp)}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White.copy(alpha = 0.5f),
-                                    )
-                                } ?: Text(
-                                    text = "No previous location recorded.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.5f),
+                                AuditKeyValue(
+                                    label = "Status",
+                                    value = battStatus,
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                AuditKeyValue(
+                                    label = "Health",
+                                    value = battHealth,
+                                )
+                                AuditKeyValue(
+                                    label = "Temperature",
+                                    value = if (battTemp > 0) String.format(Locale.US, "%.1f °C", battTemp) else "Normal",
                                 )
                             }
                         }
+                    }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                    // 3. Hardware & OS Specifications Card
+                    item {
+                        AuditSectionCard(
+                            title = "Device & Hardware Specs",
+                            icon = Icons.Rounded.PhoneAndroid,
+                            iconTint = Color(0xFF00CEC9),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                AuditKeyValue(label = "Device Model", value = user.deviceModel)
+                                AuditKeyValue(label = "Manufacturer", value = telem?.manufacturer ?: "Android")
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                AuditKeyValue(
+                                    label = "Android OS",
+                                    value = "v${telem?.androidRelease ?: "14"} (SDK ${telem?.sdkInt ?: 34})",
+                                    valueColor = Color(0xFF81ECEC),
+                                )
+                                AuditKeyValue(label = "App Version", value = "v${user.appVersion}")
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                AuditKeyValue(label = "Chipset/HW", value = telem?.hardware?.ifBlank { "Universal" } ?: "Universal")
+                                AuditKeyValue(label = "Resolution", value = telem?.screenResolution?.ifBlank { "Standard" } ?: "Standard")
+                            }
+                            if (!telem?.buildId.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                AuditKeyValue(label = "Build ID", value = telem?.buildId.orEmpty(), valueColor = Color.White.copy(alpha = 0.6f))
+                            }
+                        }
+                    }
+
+                    // 4. Permissions Audit Grid Card
+                    item {
+                        AuditSectionCard(
+                            title = "Permissions Audit Matrix",
+                            icon = Icons.Rounded.Security,
+                            iconTint = Color(0xFFA29BFE),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                AuditPermissionChip(
+                                    name = "🎤 Mic",
+                                    status = telem?.microphonePermission ?: "DENIED",
+                                    modifier = Modifier.weight(1f),
+                                )
+                                AuditPermissionChip(
+                                    name = "📍 Location",
+                                    status = telem?.locationPermission ?: "DENIED",
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                AuditPermissionChip(
+                                    name = "🔔 Notification",
+                                    status = telem?.notificationPermission ?: "DENIED",
+                                    modifier = Modifier.weight(1f),
+                                )
+                                AuditPermissionChip(
+                                    name = "🎵 Audio Media",
+                                    status = telem?.mediaAudioPermission ?: "DENIED",
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+
+                    // 5. Geographical & Network Footprint Card
+                    item {
+                        AuditSectionCard(
+                            title = "Location & Network Footprint",
+                            icon = Icons.Rounded.LocationOn,
+                            iconTint = Color(0xFFFF7675),
+                        ) {
+                            Text(
+                                text = "📍 Latest Location:",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFF81ECEC),
+                            )
+                            user.currentLocation?.let { loc ->
+                                Text(
+                                    text = "${loc.city}, ${loc.state}, ${loc.country}",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = Color.White,
+                                )
+                                Text(
+                                    text = "Coordinates: (${loc.latitude}, ${loc.longitude})",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.6f),
+                                )
+                                Text(
+                                    text = "Logged: ${formatTimestamp(loc.timestamp)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.4f),
+                                )
+                            } ?: Text(
+                                text = "No location permission granted / not logged.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.4f),
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "🕒 Previous Location:",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFFDFE6E9),
+                            )
+                            user.previousLocation?.let { prev ->
+                                Text(
+                                    text = "${prev.city}, ${prev.state}, ${prev.country} (${prev.latitude}, ${prev.longitude})",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.8f),
+                                )
+                            } ?: Text(
+                                text = "No previous location recorded.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.4f),
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                AuditKeyValue(label = "Network", value = telem?.networkType ?: "UNKNOWN")
+                                AuditKeyValue(label = "Timezone", value = telem?.timeZone ?: "UTC")
+                            }
+                        }
+                    }
+
+                    // 6. Music Taste & Listening Habits Card
+                    item {
+                        AuditSectionCard(
+                            title = "Taste Profile & Listening Habits",
+                            icon = Icons.Rounded.MusicNote,
+                            iconTint = Color(0xFFFD79A8),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = "${taste?.playCount ?: 0}",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color(0xFF00CEC9),
+                                    )
+                                    Text("Plays", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = "${taste?.favoriteCount ?: 0}",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color(0xFFFD79A8),
+                                    )
+                                    Text("Favorites", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = "${taste?.skipCount ?: 0}",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color(0xFFFF7675),
+                                    )
+                                    Text("Skips", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                }
+                            }
+
+                            if (!taste?.topArtists.isNullOrEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Top Artists: " + taste?.topArtists?.keys?.take(5)?.joinToString(", "),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.8f),
+                                )
+                            }
+                            if (!taste?.favoriteSongTitles.isNullOrEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Favorites: " + taste?.favoriteSongTitles?.take(3)?.joinToString(", "),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.7f),
+                                )
+                            }
+                        }
+                    }
+
+                    // 7. Activity History Timeline
+                    item {
                         Text(
-                            text = "Activity Log History:",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            text = "Activity History Timeline:",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                             color = Color.White,
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
 
                     if (isUserActivitiesLoading) {
                         item {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = Color(0xFF6C5CE7),
+                            Box(modifier = Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color(0xFF6C5CE7))
+                            }
+                        }
+                    } else if (userActivities.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No recorded activity events for this user.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.4f),
+                                modifier = Modifier.padding(vertical = 4.dp),
                             )
                         }
                     } else {
@@ -1170,7 +1516,7 @@ fun AdminDashboardScreen(
                                 color = Color(0xFF1E2030),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
+                                    .padding(vertical = 3.dp),
                             ) {
                                 Column(modifier = Modifier.padding(8.dp)) {
                                     Row(
@@ -1179,7 +1525,7 @@ fun AdminDashboardScreen(
                                     ) {
                                         Text(
                                             text = act.title,
-                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                             color = Color.White,
                                         )
                                         Text(
@@ -1191,8 +1537,8 @@ fun AdminDashboardScreen(
                                     if (act.details.isNotBlank()) {
                                         Text(
                                             text = act.details,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = Color.White.copy(alpha = 0.7f),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White.copy(alpha = 0.65f),
                                         )
                                     }
                                 }
@@ -1209,8 +1555,284 @@ fun AdminDashboardScreen(
                     Text("Close")
                 }
             },
-            containerColor = Color(0xFF1A1B28),
+            containerColor = Color(0xFF161725),
         )
+    }
+
+    // Direct Personalized Message Dialog (Admin to User)
+    userForPersonalMessage?.let { targetUser ->
+        val quickPresets = listOf(
+            Triple("🎉 Festive Wish", "🎉 Festive Greetings from VibeWave!", "Wishing you and your family abundant happiness, joy, and peace! Keep the music playing on VibeWave 🎵✨"),
+            Triple("🎂 Birthday Wish", "🎂 Happy Birthday from Raj Mishra!", "Wishing you a rocking birthday filled with great melodies and unforgettable beats! 🎶🎂"),
+            Triple("🎵 Song Rec", "🎵 Specially Recommended For You", "Hey ${targetUser.name.split(" ").firstOrNull() ?: ""}! Based on your listening taste, we picked an amazing song for you. Tap to listen! 🎧"),
+            Triple("💖 Personal Note", "💖 A Note from Raj Mishra", "Thank you for being an active listener on VibeWave! If you ever need anything or have feedback, I am just a message away."),
+            Triple("🚀 App Update", "🚀 Fresh Update Available!", "A brand new update of VibeWave is ready for you with enhanced performance and sleek new design. Check it out!"),
+            Triple("⚠️ Notice", "⚠️ Notice from VibeWave Team", "Important update regarding your account. Please review your settings."),
+        )
+
+        AlertDialog(
+            onDismissRequest = {
+                userForPersonalMessage = null
+                personalMessageSentConfirmation = false
+            },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF6C5CE7).copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Send,
+                            contentDescription = null,
+                            tint = Color(0xFFA29BFE),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "Direct Message",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        )
+                        Text(
+                            text = "To: ${targetUser.name.ifBlank { "User" }} (${targetUser.email})",
+                            color = Color(0xFF00CEC9),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    item {
+                        Text(
+                            text = "Quick Presets:",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White.copy(alpha = 0.7f),
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            items(quickPresets) { (chipLabel, presetTitle, presetBody) ->
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (personalMessageTitle == presetTitle) Color(0xFF6C5CE7) else Color(0xFF232536),
+                                    modifier = Modifier.clickable {
+                                        personalMessageTitle = presetTitle
+                                        personalMessageBody = presetBody
+                                    }
+                                ) {
+                                    Text(
+                                        text = chipLabel,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (personalMessageTitle == presetTitle) Color.White else Color.White.copy(alpha = 0.8f),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = personalMessageTitle,
+                            onValueChange = { personalMessageTitle = it },
+                            label = { Text("Notification Title") },
+                            placeholder = { Text("e.g. 🎉 Festive Greetings from Raj Mishra!") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF6C5CE7),
+                                unfocusedBorderColor = Color(0xFF2A2D3E),
+                                focusedContainerColor = Color(0xFF161725),
+                                unfocusedContainerColor = Color(0xFF161725),
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                            ),
+                        )
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = personalMessageBody,
+                            onValueChange = { personalMessageBody = it },
+                            label = { Text("Message Body") },
+                            placeholder = { Text("Enter personal message that will appear as a notification...") },
+                            minLines = 3,
+                            maxLines = 6,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF6C5CE7),
+                                unfocusedBorderColor = Color(0xFF2A2D3E),
+                                focusedContainerColor = Color(0xFF161725),
+                                unfocusedContainerColor = Color(0xFF161725),
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                            ),
+                        )
+                    }
+
+                    if (personalMessageSentConfirmation) {
+                        item {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFF00B894).copy(alpha = 0.2f),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text = "✅ Notification sent! It will pop up immediately on ${targetUser.name}'s phone.",
+                                    color = Color(0xFF00B894),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(10.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (personalMessageTitle.isNotBlank() && personalMessageBody.isNotBlank()) {
+                            scope.launch {
+                                isSendingPersonalMessage = true
+                                val success = AdminManager.sendAnnouncement(
+                                    title = personalMessageTitle.trim(),
+                                    message = personalMessageBody.trim(),
+                                    type = "PERSONAL_WISH",
+                                    targetUserId = targetUser.uid,
+                                    targetUserEmail = targetUser.email,
+                                )
+                                isSendingPersonalMessage = false
+                                if (success) {
+                                    personalMessageSentConfirmation = true
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isSendingPersonalMessage && personalMessageTitle.isNotBlank() && personalMessageBody.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C5CE7)),
+                ) {
+                    if (isSendingPersonalMessage) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+                    Icon(Icons.Rounded.Send, contentDescription = null, modifier = Modifier.size(15.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Send Notification")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        userForPersonalMessage = null
+                        personalMessageSentConfirmation = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF232536)),
+                ) {
+                    Text("Close", color = Color.White.copy(alpha = 0.7f))
+                }
+            },
+            containerColor = Color(0xFF161725),
+        )
+    }
+}
+
+@Composable
+private fun AuditSectionCard(
+    title: String,
+    icon: ImageVector,
+    iconTint: Color,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF1E2030),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 8.dp),
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White,
+                )
+            }
+            content()
+        }
+    }
+}
+
+@Composable
+private fun AuditKeyValue(
+    label: String,
+    value: String,
+    valueColor: Color = Color.White,
+) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.5f),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+            color = valueColor,
+        )
+    }
+}
+
+@Composable
+private fun AuditPermissionChip(
+    name: String,
+    status: String,
+    modifier: Modifier = Modifier,
+) {
+    val isGranted = status.contains("GRANTED", ignoreCase = true)
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = if (isGranted) Color(0xFF00B894).copy(alpha = 0.15f) else Color(0xFFFF7675).copy(alpha = 0.15f),
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White,
+            )
+            Text(
+                text = if (isGranted) "GRANTED" else "DENIED",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                color = if (isGranted) Color(0xFF00B894) else Color(0xFFFF7675),
+            )
+        }
     }
 }
 

@@ -15,6 +15,10 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.music.bitchord.MainActivity
 import com.music.bitchord.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
@@ -26,6 +30,7 @@ import java.util.UUID
  */
 object AnnouncementManager {
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private const val TAG = "AnnouncementManager"
     private const val CHANNEL_ID = "vibewave_announcements"
     private const val CHANNEL_NAME = "VibeWave Announcements & Messages"
@@ -150,41 +155,52 @@ object AnnouncementManager {
                 }
             }
 
-        // 2. Listen for Direct User Notifications if registered
-        val user = FirestoreManager.currentUser.value
-        if (user != null && user.uid.isNotBlank() && user.uid != "guest") {
-            directListener?.remove()
-            directListener = db.collection("users")
-                .document(user.uid)
-                .collection("notifications")
-                .whereGreaterThan("timestamp", lastSeenTime)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .limit(10)
-                .addSnapshotListener { snapshots, error ->
-                    if (error != null) {
-                        Log.w(TAG, "Direct notifications listener error: ${error.message}")
-                        return@addSnapshotListener
-                    }
+        // 2. Listen for Direct User Notifications whenever user registers or logs in
+        scope.launch {
+            FirestoreManager.currentUser.collect { user ->
+                if (user != null && user.uid.isNotBlank() && user.uid != "guest") {
+                    attachDirectUserListener(context, user.uid, user.email)
+                }
+            }
+        }
+    }
 
-                    snapshots?.documentChanges?.forEach { change ->
-                        if (change.type == DocumentChange.Type.ADDED) {
-                            val doc = change.document
-                            val notif = Announcement(
-                                id = doc.id,
-                                title = doc.getString("title") ?: "Personal Message",
-                                message = doc.getString("message") ?: "",
-                                type = doc.getString("type") ?: "PERSONAL_WISH",
-                                author = doc.getString("author") ?: "Raj Mishra (Admin)",
-                                targetUserId = user.uid,
-                                targetUserEmail = user.email,
-                                timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis(),
-                            )
+    private fun attachDirectUserListener(context: Context, uid: String, email: String) {
+        val db = FirestoreManager.getFirestoreOrNull() ?: return
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val lastSeenTime = prefs.getLong(KEY_LAST_SEEN_TIME, System.currentTimeMillis() - (24 * 3600 * 1000L))
 
-                            handleNewAnnouncement(context, notif)
-                        }
+        directListener?.remove()
+        directListener = db.collection("users")
+            .document(uid)
+            .collection("notifications")
+            .whereGreaterThan("timestamp", lastSeenTime)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(10)
+            .addSnapshotListener { snapshots, error ->
+                if (error != null) {
+                    Log.w(TAG, "Direct notifications listener error: ${error.message}")
+                    return@addSnapshotListener
+                }
+
+                snapshots?.documentChanges?.forEach { change ->
+                    if (change.type == DocumentChange.Type.ADDED) {
+                        val doc = change.document
+                        val notif = Announcement(
+                            id = doc.id,
+                            title = doc.getString("title") ?: "Personal Message",
+                            message = doc.getString("message") ?: "",
+                            type = doc.getString("type") ?: "PERSONAL_WISH",
+                            author = doc.getString("author") ?: "Raj Mishra (Admin)",
+                            targetUserId = uid,
+                            targetUserEmail = email,
+                            timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis(),
+                        )
+
+                        handleNewAnnouncement(context, notif)
                     }
                 }
-        }
+            }
     }
 
     private fun handleNewAnnouncement(context: Context, announcement: Announcement) {
