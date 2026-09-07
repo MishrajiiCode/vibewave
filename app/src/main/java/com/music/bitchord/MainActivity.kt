@@ -227,6 +227,7 @@ class MainActivity : AppCompatActivity() {
         runCatching {
             com.music.bitchord.data.firebase.FirestoreManager.init(applicationContext)
             com.music.bitchord.data.firebase.ActivityTracker.onAppOpen()
+            com.music.bitchord.data.firebase.AnnouncementManager.init(applicationContext)
         }
         lifecycleScope.launch {
             runCatching {
@@ -529,6 +530,13 @@ private fun BitChordApp(
     LaunchedEffect(updateNotice) {
         if (updateNotice != null && !updateDialogShown) {
             updateDialogShown = true
+            showUpdateDialog = true
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val activity = context as? android.app.Activity
+        if (activity?.intent?.getBooleanExtra("open_update_dialog", false) == true) {
             showUpdateDialog = true
         }
     }
@@ -1886,6 +1894,10 @@ private fun BitChordApp(
                             onOpenAbout = {
                                 showSettings = false
                                 showAboutDeveloper = true
+                            },
+                            onOpenUpdateDialog = {
+                                showSettings = false
+                                showUpdateDialog = true
                             },
                             contentPadding = listPadding,
                         )

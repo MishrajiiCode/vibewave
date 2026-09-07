@@ -93,42 +93,13 @@ object AppUpdateChecker {
     }
 
     fun showUpdateNotification(context: Context, version: String) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) return
-
-        val channelId = "app_updates"
-        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "App Updates",
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply {
-                description = "Notifies when a new VibeWave update is available"
-            }
-            manager.createNotificationChannel(channel)
-        }
-
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            0,
-            launchIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        com.music.bitchord.data.firebase.AnnouncementManager.showRichNotification(
+            context = context,
+            title = "New VibeWave Update v$version Available!",
+            message = "Version $version is ready to install! Tap to view the full changelog and update directly.",
+            type = "APP_UPDATE",
+            isUpdate = true,
         )
-
-        val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("🎉 New VibeWave Update Available!")
-            .setContentText("Version $version is ready to install.")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        manager.notify(1001, notification)
     }
 
     /**
@@ -142,21 +113,35 @@ object AppUpdateChecker {
     }
 
     /**
-     * The release usually carries exactly one `.apk`; take its direct download
-     * URL. A release without one (source-only draft, renamed asset) leaves
-     * [UpdateInfo.apkUrl] null and the UI falls back to opening the releases
-     * page as before.
+     * Finds the most compatible APK for the user's device architecture (e.g. arm64-v8a, universal).
      */
     private fun apkAssetUrl(release: JsonObject): String? = runCatching {
-        release["assets"]?.jsonArray
-            ?.mapNotNull { it as? JsonObject }
-            ?.firstOrNull { asset ->
-                asset["name"]?.jsonPrimitive?.contentOrNull?.endsWith(".apk", ignoreCase = true) == true &&
-                    asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
-            }
-            ?.get("browser_download_url")
-            ?.jsonPrimitive
-            ?.contentOrNull
+        val assets = release["assets"]?.jsonArray?.mapNotNull { it as? JsonObject } ?: emptyList()
+        val abis = Build.SUPPORTED_ABIS ?: emptyArray()
+        val preferredKeyword = when {
+            abis.any { it.contains("arm64", ignoreCase = true) } -> "arm64-v8a"
+            abis.any { it.contains("v7a", ignoreCase = true) } -> "armeabi-v7a"
+            abis.any { it.contains("x86_64", ignoreCase = true) } -> "x86_64"
+            else -> "universal"
+        }
+
+        val matchedAsset = assets.firstOrNull { asset ->
+            val name = asset["name"]?.jsonPrimitive?.contentOrNull ?: ""
+            name.endsWith(".apk", ignoreCase = true) &&
+                name.contains(preferredKeyword, ignoreCase = true) &&
+                asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
+        } ?: assets.firstOrNull { asset ->
+            val name = asset["name"]?.jsonPrimitive?.contentOrNull ?: ""
+            name.endsWith(".apk", ignoreCase = true) &&
+                name.contains("universal", ignoreCase = true) &&
+                asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
+        } ?: assets.firstOrNull { asset ->
+            val name = asset["name"]?.jsonPrimitive?.contentOrNull ?: ""
+            name.endsWith(".apk", ignoreCase = true) &&
+                asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
+        }
+
+        matchedAsset?.get("browser_download_url")?.jsonPrimitive?.contentOrNull
     }.getOrNull()
 
     /**
@@ -175,7 +160,7 @@ object AppUpdateChecker {
             val dir = File(context.cacheDir, CACHE_SUBDIR).apply { mkdirs() }
             // Drop anything left over from an earlier attempt.
             dir.listFiles()?.forEach { it.delete() }
-            val target = File(dir, "bitchord-${info.version}.apk")
+            val target = File(dir, "vibewave-${info.version}.apk")
 
             val request = Request.Builder().url(url).build()
             Http.client.newCall(request).execute().use { response ->

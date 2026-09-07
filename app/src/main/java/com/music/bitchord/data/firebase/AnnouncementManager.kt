@@ -28,7 +28,9 @@ object AnnouncementManager {
 
     private const val TAG = "AnnouncementManager"
     private const val CHANNEL_ID = "vibewave_announcements"
-    private const val CHANNEL_NAME = "VibeWave Announcements & Updates"
+    private const val CHANNEL_NAME = "VibeWave Announcements & Messages"
+    private const val UPDATE_CHANNEL_ID = "vibewave_updates"
+    private const val UPDATE_CHANNEL_NAME = "VibeWave App Updates"
     private const val PREFS_NAME = "vibewave_announcement_prefs"
     private const val KEY_LAST_SEEN_TIME = "last_seen_announcement_time"
 
@@ -77,23 +79,39 @@ object AnnouncementManager {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        createNotificationChannel(context)
+        createNotificationChannels(context)
         startListening()
     }
 
-    private fun createNotificationChannel(context: Context) {
+    private fun createNotificationChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            val announcementChannel = NotificationChannel(
                 CHANNEL_ID,
                 CHANNEL_NAME,
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Direct updates, festival wishes, and music alerts from Raj Mishra (Admin)"
+                description = "Direct messages, festival greetings, and music recommendations from Raj Mishra (Admin)"
                 enableLights(true)
+                lightColor = 0xFF7C4DFF.toInt()
                 enableVibration(true)
+                vibrationPattern = longArrayOf(0, 200, 100, 200)
             }
-            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+            manager.createNotificationChannel(announcementChannel)
+
+            val updateChannel = NotificationChannel(
+                UPDATE_CHANNEL_ID,
+                UPDATE_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications when new VibeWave releases and features are available"
+                enableLights(true)
+                lightColor = 0xFF00E5FF.toInt()
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 150, 250)
+            }
+            manager.createNotificationChannel(updateChannel)
         }
     }
 
@@ -181,7 +199,14 @@ object AnnouncementManager {
             _announcementsList.value = listOf(announcement) + _announcementsList.value
 
             // Show Android native notification in drawer
-            showSystemNotification(context, announcement)
+            showRichNotification(
+                context = context,
+                id = announcement.id,
+                title = announcement.title,
+                message = announcement.message,
+                type = announcement.type,
+                author = announcement.author
+            )
         }
     }
 
@@ -189,47 +214,116 @@ object AnnouncementManager {
         _latestAnnouncement.value = null
     }
 
-    private fun showSystemNotification(context: Context, announcement: Announcement) {
+    /**
+     * Shows a rich, high-visibility notification modeled after modern engagement notifications (Swiggy / Zomato).
+     * Features:
+     * - BigTextStyle with large readable copy and summary line
+     * - Accent color (#7C4DFF vibrant purple)
+     * - Large app icon
+     * - Interactive action buttons ("Open VibeWave" / "Listen Now")
+     * - Heads-up pop on screen (HIGH priority)
+     */
+    fun showRichNotification(
+        context: Context,
+        id: String = UUID.randomUUID().toString(),
+        title: String,
+        message: String,
+        type: String = "GENERAL",
+        author: String = "Raj Mishra (Admin)",
+        isUpdate: Boolean = false,
+    ) {
         try {
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 putExtra("from_announcement", true)
-                putExtra("announcement_id", announcement.id)
+                putExtra("announcement_id", id)
+                putExtra("announcement_type", type)
+                if (isUpdate) {
+                    putExtra("open_update_dialog", true)
+                }
             }
 
             val pendingIntent = PendingIntent.getActivity(
                 context,
-                announcement.id.hashCode(),
+                id.hashCode(),
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
             )
 
             val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val emoji = announcement.getEmoji()
-            val formattedTitle = "$emoji ${announcement.title}"
+            val emoji = when (type.uppercase()) {
+                "FESTIVAL_WISH" -> "🎊"
+                "BIRTHDAY_WISH" -> "🎂"
+                "MUSIC_RECOMMENDATION" -> "🎵"
+                "APP_UPDATE" -> "🚀"
+                "PERSONAL_WISH" -> "💖"
+                else -> "📢"
+            }
 
-            val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            val channelId = if (isUpdate || type.uppercase() == "APP_UPDATE") UPDATE_CHANNEL_ID else CHANNEL_ID
+            val formattedTitle = "$emoji $title"
+            val summaryText = if (isUpdate) "VibeWave • Update Available" else "VibeWave • $author"
+
+            // Decode large icon
+            val largeIcon = try {
+                android.graphics.BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher)
+            } catch (t: Throwable) {
+                null
+            }
+
+            val bigTextStyle = NotificationCompat.BigTextStyle()
+                .setBigContentTitle(formattedTitle)
+                .bigText(message)
+                .setSummaryText(summaryText)
+
+            val actionButtonTitle = when (type.uppercase()) {
+                "APP_UPDATE" -> "Update Now 🚀"
+                "MUSIC_RECOMMENDATION" -> "Listen Now 🎵"
+                else -> "Open VibeWave ✨"
+            }
+
+            val actionIntent = PendingIntent.getActivity(
+                context,
+                id.hashCode() + 1,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            )
+
+            val builder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.mipmap.ic_launcher)
+                .apply {
+                    if (largeIcon != null) setLargeIcon(largeIcon)
+                }
                 .setContentTitle(formattedTitle)
-                .setContentText(announcement.message)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(announcement.message))
+                .setContentText(message)
+                .setSubText(if (isUpdate) "Update Available" else "Admin Alert")
+                .setStyle(bigTextStyle)
+                .setColor(0xFF7C4DFF.toInt())
+                .setColorized(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setSound(soundUri)
+                .setVibrate(longArrayOf(0, 200, 100, 200))
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
+                .addAction(
+                    android.R.drawable.ic_menu_send,
+                    actionButtonTitle,
+                    actionIntent
+                )
 
             val manager = NotificationManagerCompat.from(context)
-            if (NotificationManagerCompat.from(context).areNotificationsEnabled()) {
-                manager.notify(announcement.id.hashCode(), builder.build())
-                Log.d(TAG, "Notification delivered: $formattedTitle")
+            if (manager.areNotificationsEnabled()) {
+                manager.notify(id.hashCode(), builder.build())
+                Log.d(TAG, "Rich notification dispatched: $formattedTitle")
             } else {
-                Log.w(TAG, "Notification permission disabled on device")
+                Log.w(TAG, "Notifications disabled for this app on system")
             }
         } catch (e: SecurityException) {
             Log.w(TAG, "POST_NOTIFICATIONS permission not granted: ${e.message}")
         } catch (e: Throwable) {
-            Log.w(TAG, "Failed to display notification: ${e.message}")
+            Log.w(TAG, "Failed to display rich notification: ${e.message}")
         }
     }
 }

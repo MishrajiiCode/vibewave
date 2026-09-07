@@ -42,22 +42,20 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
 
-/** UIAlertController's own metrics: fixed narrow width, 14pt corner, 44pt rows. */
-internal val ALERT_WIDTH = 270.dp
-internal val ALERT_CORNER = 14.dp
-internal val ACTION_HEIGHT = 44.dp
+/** Spacious width and modern corner for rich changelog rendering */
+internal val ALERT_WIDTH = 330.dp
+internal val ALERT_CORNER = 20.dp
+internal val ACTION_HEIGHT = 48.dp
 
 /**
- * The dim behind the alert. Flat on purpose — the glass is the card, and
- * blurring the wallpaper *behind* it too leaves nothing for the card to be
- * frosted against, which is what made this read as a grey box before.
+ * The dim behind the alert.
  */
-internal val SCRIM_COLOR = Color.Black.copy(alpha = 0.28f)
+internal val SCRIM_COLOR = Color.Black.copy(alpha = 0.45f)
 
-private val DOWNLOAD_ROW_HEIGHT = 4.dp
+private val DOWNLOAD_ROW_HEIGHT = 6.dp
 
-/** How much of the card's height the release notes are allowed to fill before scrolling. */
-private val NOTES_MAX_HEIGHT = 220.dp
+/** Generous height for release changelog so user can review details clearly */
+private val NOTES_MAX_HEIGHT = 280.dp
 
 /**
  * Once-per-launch nudge that a newer build is on GitHub Releases — the top
@@ -138,11 +136,30 @@ fun UpdateAvailableDialog(
                     .padding(horizontal = 16.dp, vertical = 19.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                // Version Badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF7C4DFF).copy(alpha = 0.18f))
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "🚀 VibeWave v$version",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = Color(0xFF9D7BFF),
+                        ),
+                    )
+                }
+
                 Text(
                     text = stringResource(R.string.software_update),
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.W600,
+                    modifier = Modifier.padding(top = 8.dp),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
@@ -161,15 +178,13 @@ fun UpdateAvailableDialog(
                     modifier = Modifier.padding(top = 4.dp),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 13.sp,
-                        lineHeight = 17.sp,
+                        lineHeight = 18.sp,
                     ),
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
                     textAlign = TextAlign.Center,
                 )
 
-                // The download's progress, drawn as a thin fill across a
-                // hairline track — same weight as [AlertRule], so it reads as
-                // part of the card rather than a widget bolted onto it.
+                // The download's progress bar & percentage
                 val downloading = state as? AppUpdateChecker.DownloadState.Downloading
                 if (downloading != null || state is AppUpdateChecker.DownloadState.Failed) {
                     Box(
@@ -186,9 +201,18 @@ fun UpdateAvailableDialog(
                                     .fillMaxWidth(downloading.fraction)
                                     .height(DOWNLOAD_ROW_HEIGHT)
                                     .clip(RoundedCornerShape(DOWNLOAD_ROW_HEIGHT / 2))
-                                    .background(MaterialTheme.colorScheme.primary),
+                                    .background(Color(0xFF7C4DFF)),
                             )
                         }
+                    }
+                    if (downloading != null) {
+                        val percent = (downloading.fraction * 100).toInt()
+                        Text(
+                            text = "Downloading APK: $percent%",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = Color(0xFF9D7BFF),
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
                     }
                 }
                 if (state is AppUpdateChecker.DownloadState.Failed) {
@@ -201,35 +225,31 @@ fun UpdateAvailableDialog(
                     )
                 }
 
-                // The release's own notes, rendered as Markdown rather than
-                // dumped as raw text — GitHub release bodies lean on headings,
-                // bullet lists and bold for the changelog, and those are the
-                // whole point of reading this before installing.
+                // The release's own notes, rendered as Markdown inside a styled container
                 if (!notes.isNullOrBlank()) {
                     AlertRule(modifier = Modifier.padding(top = 12.dp))
                     Text(
-                        text = stringResource(R.string.whats_new),
+                        text = "📋 " + stringResource(R.string.whats_new),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 12.dp),
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.W600,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
                         ),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Start,
                     )
                     Box(
                         modifier = Modifier
-                            .padding(top = 4.dp)
+                            .padding(top = 6.dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                            .padding(10.dp)
                             .heightIn(max = NOTES_MAX_HEIGHT)
                             .verticalScroll(rememberScrollState()),
                     ) {
-                        // RichText's Material3 Text leans on LocalContentColor,
-                        // which nothing here provides — this card is a plain
-                        // Column.background(...), not a Surface, so without
-                        // this the notes render at LocalContentColor's black
-                        // default regardless of theme.
                         CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
                             RichText(style = RichTextStyle.Default) {
                                 Markdown(notes)

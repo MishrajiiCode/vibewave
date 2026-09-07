@@ -119,6 +119,7 @@ object FirestoreManager {
         val previousLocation: LocationData? = null,
         val tasteProfile: UserTasteProfile? = null,
         val telemetry: DeviceTelemetry.TelemetryData? = null,
+        val fcmToken: String = "",
         val deviceModel: String = "${Build.MANUFACTURER} ${Build.MODEL}",
         val appVersion: String = BuildConfig.VERSION_NAME,
         val createdAt: Long = System.currentTimeMillis(),
@@ -128,6 +129,7 @@ object FirestoreManager {
             "uid" to uid,
             "name" to name,
             "email" to email,
+            "fcmToken" to fcmToken,
             "currentLocation" to currentLocation?.toMap(),
             "previousLocation" to previousLocation?.toMap(),
             "tasteProfile" to tasteProfile?.toMap(),
@@ -229,6 +231,16 @@ object FirestoreManager {
             syncDeviceTelemetry()
             fetchRemoteTasteProfile(resolvedUid)
         }
+
+        // Fetch current FCM token if available
+        runCatching {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                .addOnSuccessListener { token ->
+                    if (!token.isNullOrBlank()) {
+                        saveFcmToken(token)
+                    }
+                }
+        }
     }
 
     fun sanitizeEmail(email: String): String {
@@ -306,6 +318,25 @@ object FirestoreManager {
                 Log.d(TAG, "Device telemetry refreshed in Firestore for ${user.email} (Battery: ${telemetry.batteryPercentage}%)")
             } catch (t: Throwable) {
                 Log.w(TAG, "Failed to sync device telemetry: ${t.message}")
+            }
+        }
+    }
+
+    fun saveFcmToken(token: String) {
+        if (token.isBlank()) return
+        val user = _currentUser.value
+        _currentUser.value = user?.copy(fcmToken = token)
+        if (user != null && user.uid.isNotBlank() && user.uid != "guest") {
+            scope.launch {
+                try {
+                    val db = getFirestoreOrNull() ?: return@launch
+                    db.collection(USERS_COLLECTION).document(user.uid)
+                        .set(mapOf("fcmToken" to token, "lastActive" to System.currentTimeMillis()), SetOptions.merge())
+                        .await()
+                    Log.d(TAG, "FCM token synced to Firestore for: ${user.email}")
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Failed to sync FCM token: ${t.message}")
+                }
             }
         }
     }

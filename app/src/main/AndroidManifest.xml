@@ -208,6 +208,15 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- Firebase Cloud Messaging service for push notifications -->
+        <service
+            android:name=".data.firebase.VibeWaveMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <!--
           Home-screen widgets. Two providers so the picker lists a 2×2 and a 4×2,
           both of which are the same widget resized — see MediaWidget.

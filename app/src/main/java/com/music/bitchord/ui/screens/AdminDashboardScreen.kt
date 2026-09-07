@@ -23,11 +23,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Campaign
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Upgrade
+import com.music.bitchord.BuildConfig
+import com.music.bitchord.data.AppUpdateChecker
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -82,9 +87,14 @@ fun AdminDashboardScreen(
     var loginError by remember { mutableStateOf(false) }
 
     var selectedTab by remember { mutableIntStateOf(0) }
+    var userSearchQuery by remember { mutableStateOf("") }
     var users by remember { mutableStateOf<List<FirestoreManager.UserProfile>>(emptyList()) }
     var globalActivities by remember { mutableStateOf<List<FirestoreManager.ActivityLog>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
+
+    val updateInfo by AppUpdateChecker.available.collectAsState()
+    var isCheckingUpdates by remember { mutableStateOf(false) }
+    var updateBroadcastSent by remember { mutableStateOf(false) }
 
     var selectedUserForDetail by remember { mutableStateOf<FirestoreManager.UserProfile?>(null) }
     var userActivities by remember { mutableStateOf<List<FirestoreManager.ActivityLog>>(emptyList()) }
@@ -302,6 +312,12 @@ fun AdminDashboardScreen(
                 text = { Text("Announce") },
                 icon = { Icon(Icons.Rounded.Campaign, contentDescription = null, modifier = Modifier.size(18.dp)) },
             )
+            Tab(
+                selected = selectedTab == 3,
+                onClick = { selectedTab = 3 },
+                text = { Text("Releases") },
+                icon = { Icon(Icons.Rounded.Upgrade, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            )
         }
 
         if (isLoading) {
@@ -316,24 +332,61 @@ fun AdminDashboardScreen(
         } else {
             when (selectedTab) {
                 0 -> {
-                    // Users List
+                    // Users List with Search & Filter
+                    val filteredUsers = remember(users, userSearchQuery) {
+                        if (userSearchQuery.isBlank()) users
+                        else users.filter {
+                            it.name.contains(userSearchQuery, ignoreCase = true) ||
+                            it.email.contains(userSearchQuery, ignoreCase = true) ||
+                            (it.currentLocation?.city?.contains(userSearchQuery, ignoreCase = true) == true) ||
+                            it.deviceModel.contains(userSearchQuery, ignoreCase = true)
+                        }
+                    }
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        if (users.isEmpty()) {
+                        item {
+                            OutlinedTextField(
+                                value = userSearchQuery,
+                                onValueChange = { userSearchQuery = it },
+                                placeholder = { Text("Search users by name, email, city...", color = Color.White.copy(alpha = 0.5f)) },
+                                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Color(0xFF00CEC9)) },
+                                trailingIcon = {
+                                    if (userSearchQuery.isNotBlank()) {
+                                        IconButton(onClick = { userSearchQuery = "" }) {
+                                            Icon(Icons.Rounded.Close, contentDescription = "Clear", tint = Color.White)
+                                        }
+                                    }
+                                },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color(0xFF6C5CE7),
+                                    unfocusedBorderColor = Color(0xFF2A2D3E),
+                                    focusedContainerColor = Color(0xFF161725),
+                                    unfocusedContainerColor = Color(0xFF161725),
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                ),
+                            )
+                        }
+
+                        if (filteredUsers.isEmpty()) {
                             item {
                                 Text(
-                                    text = "No users recorded in Firestore yet.",
+                                    text = if (userSearchQuery.isNotBlank()) "No users matching \"$userSearchQuery\"" else "No users recorded in Firestore yet.",
                                     color = Color.White.copy(alpha = 0.6f),
                                     modifier = Modifier.padding(24.dp),
                                 )
                             }
                         }
 
-                        items(users) { user ->
+                        items(filteredUsers) { user ->
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -809,6 +862,205 @@ fun AdminDashboardScreen(
                                         style = MaterialTheme.typography.bodyMedium,
                                         modifier = Modifier.padding(12.dp),
                                     )
+                                }
+                            }
+                        }
+                    }
+                }
+                3 -> {
+                    // App Releases & In-App Update Management
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        item {
+                            Text(
+                                text = "🚀 Release & Update Center",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White,
+                            )
+                            Text(
+                                text = "Manage GitHub releases and push instant in-app update notifications to all users.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.6f),
+                            )
+                        }
+
+                        item {
+                            // Current Installed Build Card
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xFF1E2030),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = "Current App Version",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.White.copy(alpha = 0.6f),
+                                            )
+                                            Text(
+                                                text = "v${BuildConfig.VERSION_NAME}",
+                                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                                color = Color(0xFF00CEC9),
+                                            )
+                                        }
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xFF00B894).copy(alpha = 0.2f),
+                                        ) {
+                                            Text(
+                                                text = "PRODUCTION BUILD",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                color = Color(0xFF00B894),
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            // GitHub Latest Release Card
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xFF1E2030),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "GitHub Release Status",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color.White,
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    val latest = updateInfo
+                                    if (latest != null) {
+                                        Text(
+                                            text = "Latest Release: v${latest.version}",
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                            color = Color(0xFF7C4DFF),
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "APK Download: ${if (latest.apkUrl != null) "Ready for direct in-app install ✅" else "Release page only"}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.White.copy(alpha = 0.7f),
+                                        )
+                                        if (!latest.notes.isNullOrBlank()) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = Color(0xFF161725),
+                                                modifier = Modifier.fillMaxWidth(),
+                                            ) {
+                                                Text(
+                                                    text = latest.notes,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = Color.White.copy(alpha = 0.8f),
+                                                    maxLines = 8,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = Modifier.padding(10.dp),
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Text(
+                                            text = "No newer release detected on GitHub.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = Color.White.copy(alpha = 0.7f),
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Button(
+                                            onClick = {
+                                                scope.launch {
+                                                    isCheckingUpdates = true
+                                                    AppUpdateChecker.check()
+                                                    isCheckingUpdates = false
+                                                }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A2D3E)),
+                                            modifier = Modifier.weight(1f),
+                                        ) {
+                                            if (isCheckingUpdates) {
+                                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color.White)
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                            }
+                                            Text("Check GitHub", color = Color.White)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            // Broadcast Update Alert Button
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xFF1E2030),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Broadcast Update Notification",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color.White,
+                                    )
+                                    Text(
+                                        text = "Send an instant update alert to all VibeWave users with direct in-app install action.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White.copy(alpha = 0.6f),
+                                        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+                                    )
+
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                val targetVer = updateInfo?.version ?: BuildConfig.VERSION_NAME
+                                                AdminManager.sendAnnouncement(
+                                                    title = "New VibeWave Update v$targetVer Ready! 🚀",
+                                                    message = "A fresh update is available! Tap here to view the full changelog and install it directly in the app.",
+                                                    type = "APP_UPDATE"
+                                                )
+                                                updateBroadcastSent = true
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C5CE7)),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Icon(Icons.Rounded.Upgrade, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Alert All Users About Update 🚀")
+                                    }
+
+                                    if (updateBroadcastSent) {
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xFF00B894).copy(alpha = 0.2f),
+                                            modifier = Modifier.fillMaxWidth(),
+                                        ) {
+                                            Text(
+                                                text = "✅ Update notification broadcasted to all users!",
+                                                color = Color(0xFF00B894),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                modifier = Modifier.padding(10.dp),
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
