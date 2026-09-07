@@ -46,8 +46,22 @@ import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Message
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.TableChart
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.ui.text.font.FontFamily
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.data.AppUpdateChecker
+import com.music.bitchord.data.firebase.CommunityManager
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -105,6 +119,13 @@ fun AdminDashboardScreen(
     var userSearchQuery by remember { mutableStateOf("") }
     var users by remember { mutableStateOf<List<FirestoreManager.UserProfile>>(emptyList()) }
     var globalActivities by remember { mutableStateOf<List<FirestoreManager.ActivityLog>>(emptyList()) }
+    var communityPosts by remember { mutableStateOf<List<CommunityManager.CommunityPost>>(emptyList()) }
+    var privateMessagesAudit by remember { mutableStateOf<List<CommunityManager.PrivateMessage>>(emptyList()) }
+    var activitySearchQuery by remember { mutableStateOf("") }
+    var activityFilterType by remember { mutableStateOf("ALL") }
+    var inspectingActivity by remember { mutableStateOf<FirestoreManager.ActivityLog?>(null) }
+    var communityAuditTab by remember { mutableIntStateOf(0) }
+    var communitySearchQuery by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
     val updateInfo by AppUpdateChecker.available.collectAsState()
@@ -139,7 +160,9 @@ fun AdminDashboardScreen(
         scope.launch {
             isLoading = true
             users = AdminManager.fetchAllUsers()
-            globalActivities = AdminManager.fetchGlobalActivities()
+            globalActivities = AdminManager.fetchGlobalActivities(limit = 200)
+            communityPosts = AdminManager.fetchCommunityPosts(limit = 100)
+            privateMessagesAudit = AdminManager.fetchPrivateMessagesAudit(limit = 120)
             isLoading = false
         }
     }
@@ -280,37 +303,52 @@ fun AdminDashboardScreen(
         }
 
         // Metrics Overview Strip
-        Row(
+        LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            AdminMetricCard(
-                title = "Total Users",
-                value = "${users.size}",
-                color = Color(0xFF6C5CE7),
-                modifier = Modifier.weight(1f),
-            )
-            AdminMetricCard(
-                title = "Total Logs",
-                value = "${globalActivities.size}",
-                color = Color(0xFF00CEC9),
-                modifier = Modifier.weight(1f),
-            )
-            AdminMetricCard(
-                title = "Live Status",
-                value = "Active",
-                color = Color(0xFF00B894),
-                modifier = Modifier.weight(1f),
-            )
+            item {
+                AdminMetricCard(
+                    title = "Total Users",
+                    value = "${users.size}",
+                    color = Color(0xFF6C5CE7),
+                    modifier = Modifier.width(110.dp),
+                )
+            }
+            item {
+                AdminMetricCard(
+                    title = "Activity Logs",
+                    value = "${globalActivities.size}",
+                    color = Color(0xFF00CEC9),
+                    modifier = Modifier.width(115.dp),
+                )
+            }
+            item {
+                AdminMetricCard(
+                    title = "Community",
+                    value = "${communityPosts.size}",
+                    color = Color(0xFFFD79A8),
+                    modifier = Modifier.width(110.dp),
+                )
+            }
+            item {
+                AdminMetricCard(
+                    title = "Direct Chats",
+                    value = "${privateMessagesAudit.size}",
+                    color = Color(0xFF00B894),
+                    modifier = Modifier.width(115.dp),
+                )
+            }
         }
 
-        // Navigation Tabs
-        TabRow(
+        // Navigation Tabs (5 Tabs with horizontal scroll)
+        ScrollableTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color(0xFF161725),
             contentColor = Color(0xFF6C5CE7),
+            edgePadding = 12.dp,
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
@@ -327,18 +365,24 @@ fun AdminDashboardScreen(
             Tab(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
-                text = { Text("Live Activity") },
-                icon = { Icon(Icons.Rounded.History, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                text = { Text("Activity Ledger") },
+                icon = { Icon(Icons.Rounded.TableChart, contentDescription = null, modifier = Modifier.size(18.dp)) },
             )
             Tab(
                 selected = selectedTab == 2,
                 onClick = { selectedTab = 2 },
-                text = { Text("Announce") },
-                icon = { Icon(Icons.Rounded.Campaign, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                text = { Text("Community & Chat") },
+                icon = { Icon(Icons.Rounded.Forum, contentDescription = null, modifier = Modifier.size(18.dp)) },
             )
             Tab(
                 selected = selectedTab == 3,
                 onClick = { selectedTab = 3 },
+                text = { Text("Announce") },
+                icon = { Icon(Icons.Rounded.Campaign, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            )
+            Tab(
+                selected = selectedTab == 4,
+                onClick = { selectedTab = 4 },
                 text = { Text("Releases") },
                 icon = { Icon(Icons.Rounded.Upgrade, contentDescription = null, modifier = Modifier.size(18.dp)) },
             )
@@ -530,79 +574,324 @@ fun AdminDashboardScreen(
                 }
 
                 1 -> {
-                    // Global Live Activity Feed
+                    // Date-Wise Structured Activity Ledger Table
+                    val filteredActivities = remember(globalActivities, activitySearchQuery, activityFilterType) {
+                        globalActivities.filter { log ->
+                            val matchesSearch = activitySearchQuery.isBlank() ||
+                                log.userName.contains(activitySearchQuery, ignoreCase = true) ||
+                                log.userEmail.contains(activitySearchQuery, ignoreCase = true) ||
+                                log.title.contains(activitySearchQuery, ignoreCase = true) ||
+                                log.details.contains(activitySearchQuery, ignoreCase = true) ||
+                                log.locationCity.contains(activitySearchQuery, ignoreCase = true) ||
+                                log.deviceModel.contains(activitySearchQuery, ignoreCase = true) ||
+                                log.activityType.contains(activitySearchQuery, ignoreCase = true)
+
+                            val matchesFilter = when (activityFilterType) {
+                                "ALL" -> true
+                                "PLAYS" -> log.activityType == "SONG_PLAY" || log.activityType == "SONG_SKIP"
+                                "LIKES" -> log.activityType == "SONG_RATING"
+                                "SEARCH" -> log.activityType == "SEARCH"
+                                "COMMUNITY" -> log.activityType == "COMMUNITY_POST" || log.activityType == "PRIVATE_MESSAGE"
+                                "SESSIONS" -> log.activityType == "APP_OPEN" || log.activityType == "SCREEN_VIEW"
+                                else -> true
+                            }
+                            matchesSearch && matchesFilter
+                        }
+                    }
+
+                    val dateGroupFormat = remember { SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault()) }
+                    val timeFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
+                    val groupedActivities = remember(filteredActivities) {
+                        filteredActivities.groupBy { log ->
+                            dateGroupFormat.format(Date(log.timestamp))
+                        }
+                    }
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        if (globalActivities.isEmpty()) {
-                            item {
-                                Text(
-                                    text = "No activities logged yet.",
-                                    color = Color.White.copy(alpha = 0.6f),
-                                    modifier = Modifier.padding(24.dp),
+                        item {
+                            // Ledger Controls Header
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "📊 Real-Time Activity Ledger",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = Color.White,
+                                        )
+                                        Text(
+                                            text = "Structured date-wise audit table with device telemetry & event payload",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.White.copy(alpha = 0.6f),
+                                        )
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color(0xFF00CEC9).copy(alpha = 0.15f),
+                                    ) {
+                                        Text(
+                                            text = "${filteredActivities.size} rows",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = Color(0xFF00CEC9),
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                OutlinedTextField(
+                                    value = activitySearchQuery,
+                                    onValueChange = { activitySearchQuery = it },
+                                    placeholder = { Text("Filter ledger by user, song, action, city, or device...", color = Color.White.copy(alpha = 0.45f)) },
+                                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Color(0xFF00CEC9)) },
+                                    trailingIcon = {
+                                        if (activitySearchQuery.isNotBlank()) {
+                                            IconButton(onClick = { activitySearchQuery = "" }) {
+                                                Icon(Icons.Rounded.Close, contentDescription = "Clear", tint = Color.White)
+                                            }
+                                        }
+                                    },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFF00CEC9),
+                                        unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+                                        focusedContainerColor = Color(0xFF161725),
+                                        unfocusedContainerColor = Color(0xFF161725),
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White,
+                                    ),
                                 )
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                // Filter Chips
+                                val filterTabs = listOf(
+                                    "ALL" to "All (${globalActivities.size})",
+                                    "PLAYS" to "🎵 Music (${globalActivities.count { it.activityType == "SONG_PLAY" || it.activityType == "SONG_SKIP" }})",
+                                    "LIKES" to "❤️ Ratings (${globalActivities.count { it.activityType == "SONG_RATING" }})",
+                                    "SEARCH" to "🔍 Searches (${globalActivities.count { it.activityType == "SEARCH" }})",
+                                    "COMMUNITY" to "💬 Community & Chat (${globalActivities.count { it.activityType == "COMMUNITY_POST" || it.activityType == "PRIVATE_MESSAGE" }})",
+                                    "SESSIONS" to "📱 Sessions (${globalActivities.count { it.activityType == "APP_OPEN" || it.activityType == "SCREEN_VIEW" }})",
+                                )
+
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    items(filterTabs) { (type, label) ->
+                                        val isSelected = activityFilterType == type
+                                        Surface(
+                                            shape = RoundedCornerShape(16.dp),
+                                            color = if (isSelected) Color(0xFF6C5CE7) else Color(0xFF1E2030),
+                                            border = BorderStroke(1.dp, if (isSelected) Color(0xFFA29BFE) else Color.White.copy(alpha = 0.08f)),
+                                            modifier = Modifier.clickable { activityFilterType = type },
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
+                                                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.75f),
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 
-                        items(globalActivities) { log ->
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp)),
-                                color = Color(0xFF1C1E2D),
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
+                        if (groupedActivities.isEmpty()) {
+                            item {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = Color(0xFF1E2030),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFF6C5CE7).copy(alpha = 0.2f)),
-                                        contentAlignment = Alignment.Center,
+                                    Column(
+                                        modifier = Modifier.padding(28.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
                                     ) {
-                                        Text(
-                                            text = log.activityType.take(2),
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                            color = Color(0xFF6C5CE7),
-                                        )
+                                        Icon(Icons.Rounded.TableChart, contentDescription = null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(40.dp))
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text("No activity logs match your filter.", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodyMedium)
                                     }
+                                }
+                            }
+                        }
 
-                                    Spacer(modifier = Modifier.width(12.dp))
-
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                        ) {
+                        groupedActivities.forEach { (dateKey, dateLogs) ->
+                            item {
+                                // Date Section Banner
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFF6C5CE7).copy(alpha = 0.14f),
+                                    border = BorderStroke(1.dp, Color(0xFF6C5CE7).copy(alpha = 0.35f)),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Rounded.CalendarMonth, contentDescription = null, tint = Color(0xFFA29BFE), modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
                                             Text(
-                                                text = log.userName.ifBlank { "User" },
+                                                text = dateKey,
                                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                                 color = Color.White,
                                             )
+                                        }
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFF6C5CE7).copy(alpha = 0.35f),
+                                        ) {
                                             Text(
-                                                text = formatTimestamp(log.timestamp),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = Color.White.copy(alpha = 0.4f),
+                                                text = "${dateLogs.size} events",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                color = Color(0xFFD6D0FF),
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                             )
                                         }
-                                        Text(
-                                            text = log.title,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = Color.White.copy(alpha = 0.9f),
-                                        )
-                                        if (log.details.isNotBlank()) {
-                                            Text(
-                                                text = log.details,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = Color.White.copy(alpha = 0.55f),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
+                                    }
+                                }
+                            }
+
+                            item {
+                                // Table Card with Horizontal Scroll
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = Color(0xFF13141F),
+                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Box(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                                        Column(modifier = Modifier.width(760.dp)) {
+                                            // Table Header
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(Color(0xFF1C1E2D))
+                                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Text("TIME", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp), color = Color.White.copy(alpha = 0.6f), modifier = Modifier.width(72.dp))
+                                                Text("USER", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp), color = Color.White.copy(alpha = 0.6f), modifier = Modifier.width(130.dp))
+                                                Text("ACTION / EVENT", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp), color = Color.White.copy(alpha = 0.6f), modifier = Modifier.width(135.dp))
+                                                Text("DETAILS & PAYLOAD", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp), color = Color.White.copy(alpha = 0.6f), modifier = Modifier.width(260.dp))
+                                                Text("DEVICE & LOCATION", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp), color = Color.White.copy(alpha = 0.6f), modifier = Modifier.width(150.dp))
+                                            }
+
+                                            // Table Rows
+                                            dateLogs.forEachIndexed { index, log ->
+                                                val isEven = index % 2 == 0
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .background(if (isEven) Color.Transparent else Color.White.copy(alpha = 0.02f))
+                                                        .clickable { inspectingActivity = log }
+                                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                ) {
+                                                    // TIME
+                                                    Text(
+                                                        text = timeFormat.format(Date(log.timestamp)),
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                                                        color = Color.White.copy(alpha = 0.6f),
+                                                        modifier = Modifier.width(72.dp),
+                                                    )
+
+                                                    // USER
+                                                    Column(modifier = Modifier.width(130.dp)) {
+                                                        Text(
+                                                            text = log.userName.ifBlank { "User" },
+                                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp),
+                                                            color = Color.White,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
+                                                        )
+                                                        Text(
+                                                            text = log.userEmail.ifBlank { log.userId.take(8) },
+                                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                                            color = Color(0xFF00CEC9).copy(alpha = 0.8f),
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
+                                                        )
+                                                    }
+
+                                                    // ACTION BADGE
+                                                    Box(modifier = Modifier.width(135.dp)) {
+                                                        val (badgeBg, badgeColor, badgeLabel) = when (log.activityType) {
+                                                            "SONG_PLAY" -> Triple(Color(0xFF00CEC9).copy(alpha = 0.15f), Color(0xFF00CEC9), "🎵 PLAY")
+                                                            "SONG_SKIP" -> Triple(Color(0xFFA29BFE).copy(alpha = 0.15f), Color(0xFFA29BFE), "⏭️ SKIP")
+                                                            "SONG_RATING" -> Triple(Color(0xFFFF7675).copy(alpha = 0.15f), Color(0xFFFF7675), "❤️ RATING")
+                                                            "SEARCH" -> Triple(Color(0xFFFDCB6E).copy(alpha = 0.15f), Color(0xFFFDCB6E), "🔍 SEARCH")
+                                                            "COMMUNITY_POST" -> Triple(Color(0xFF6C5CE7).copy(alpha = 0.2f), Color(0xFFA29BFE), "💬 POST")
+                                                            "PRIVATE_MESSAGE" -> Triple(Color(0xFF00B894).copy(alpha = 0.15f), Color(0xFF00B894), "✉️ DIRECT")
+                                                            "APP_OPEN" -> Triple(Color(0xFF55EFC4).copy(alpha = 0.15f), Color(0xFF55EFC4), "🚀 LAUNCH")
+                                                            "SCREEN_VIEW" -> Triple(Color(0xFF74B9FF).copy(alpha = 0.15f), Color(0xFF74B9FF), "👁️ VIEW")
+                                                            else -> Triple(Color.White.copy(alpha = 0.1f), Color.White, log.activityType.take(10))
+                                                        }
+                                                        Surface(
+                                                            shape = RoundedCornerShape(6.dp),
+                                                            color = badgeBg,
+                                                        ) {
+                                                            Text(
+                                                                text = badgeLabel,
+                                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
+                                                                color = badgeColor,
+                                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                                            )
+                                                        }
+                                                    }
+
+                                                    // DETAILS & PAYLOAD
+                                                    Column(modifier = Modifier.width(260.dp)) {
+                                                        Text(
+                                                            text = log.title,
+                                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, fontSize = 12.sp),
+                                                            color = Color.White.copy(alpha = 0.95f),
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
+                                                        )
+                                                        if (log.details.isNotBlank()) {
+                                                            Text(
+                                                                text = log.details,
+                                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                                                color = Color.White.copy(alpha = 0.55f),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                            )
+                                                        }
+                                                    }
+
+                                                    // DEVICE & LOCATION
+                                                    Column(modifier = Modifier.width(150.dp)) {
+                                                        Text(
+                                                            text = log.deviceModel.ifBlank { "Android" },
+                                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                                            color = Color.White.copy(alpha = 0.85f),
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
+                                                        )
+                                                        Text(
+                                                            text = log.locationCity.ifBlank { "Location Hidden" },
+                                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                                            color = Color.White.copy(alpha = 0.45f),
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -612,6 +901,282 @@ fun AdminDashboardScreen(
                 }
 
                 2 -> {
+                    // Community & Private Chat Master Audit Center (Admin Full Visibility)
+                    val filteredPosts = remember(communityPosts, communitySearchQuery) {
+                        if (communitySearchQuery.isBlank()) communityPosts
+                        else communityPosts.filter {
+                            it.userName.contains(communitySearchQuery, ignoreCase = true) ||
+                            it.content.contains(communitySearchQuery, ignoreCase = true) ||
+                            (it.songTitle?.contains(communitySearchQuery, ignoreCase = true) == true) ||
+                            (it.songArtist?.contains(communitySearchQuery, ignoreCase = true) == true)
+                        }
+                    }
+
+                    val filteredMessages = remember(privateMessagesAudit, communitySearchQuery) {
+                        if (communitySearchQuery.isBlank()) privateMessagesAudit
+                        else privateMessagesAudit.filter {
+                            it.senderName.contains(communitySearchQuery, ignoreCase = true) ||
+                            it.receiverName.contains(communitySearchQuery, ignoreCase = true) ||
+                            it.message.contains(communitySearchQuery, ignoreCase = true)
+                        }
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        item {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "💬 Community & Chat Audit",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = Color.White,
+                                        )
+                                        Text(
+                                            text = "Admin full audit view of public music reviews & 1-on-1 private messaging",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.White.copy(alpha = 0.6f),
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Sub Tab Toggle
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF161725))
+                                        .padding(4.dp),
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (communityAuditTab == 0) Color(0xFF6C5CE7) else Color.Transparent,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable { communityAuditTab = 0 },
+                                    ) {
+                                        Text(
+                                            text = "Public Reviews (${communityPosts.size})",
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = if (communityAuditTab == 0) Color.White else Color.White.copy(alpha = 0.6f),
+                                            modifier = Modifier.padding(vertical = 8.dp),
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        )
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (communityAuditTab == 1) Color(0xFF6C5CE7) else Color.Transparent,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable { communityAuditTab = 1 },
+                                    ) {
+                                        Text(
+                                            text = "Private Messages (${privateMessagesAudit.size})",
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = if (communityAuditTab == 1) Color.White else Color.White.copy(alpha = 0.6f),
+                                            modifier = Modifier.padding(vertical = 8.dp),
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                OutlinedTextField(
+                                    value = communitySearchQuery,
+                                    onValueChange = { communitySearchQuery = it },
+                                    placeholder = { Text("Search reviews, authors, or direct messages...", color = Color.White.copy(alpha = 0.45f)) },
+                                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Color(0xFF00CEC9)) },
+                                    trailingIcon = {
+                                        if (communitySearchQuery.isNotBlank()) {
+                                            IconButton(onClick = { communitySearchQuery = "" }) {
+                                                Icon(Icons.Rounded.Close, contentDescription = "Clear", tint = Color.White)
+                                            }
+                                        }
+                                    },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFF00CEC9),
+                                        unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+                                        focusedContainerColor = Color(0xFF161725),
+                                        unfocusedContainerColor = Color(0xFF161725),
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White,
+                                    ),
+                                )
+                            }
+                        }
+
+                        if (communityAuditTab == 0) {
+                            // Public Reviews Audit List
+
+                            if (filteredPosts.isEmpty()) {
+                                item {
+                                    Text("No public reviews posted yet.", color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(20.dp))
+                                }
+                            }
+
+                            items(filteredPosts) { post ->
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = Color(0xFF1C1E2D),
+                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = post.userName,
+                                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                                    color = Color.White,
+                                                )
+                                                Text(
+                                                    text = formatTimestamp(post.timestamp),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = Color.White.copy(alpha = 0.4f),
+                                                )
+                                            }
+
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = "★".repeat(post.rating) + "☆".repeat(5 - post.rating),
+                                                    color = Color(0xFFFFD166),
+                                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                IconButton(
+                                                    onClick = {
+                                                        scope.launch {
+                                                            AdminManager.deleteCommunityPost(post.id)
+                                                            communityPosts = communityPosts.filterNot { it.id == post.id }
+                                                        }
+                                                    },
+                                                    modifier = Modifier.size(28.dp),
+                                                ) {
+                                                    Icon(Icons.Rounded.Delete, contentDescription = "Moderate / Delete", tint = Color(0xFFFF7675), modifier = Modifier.size(16.dp))
+                                                }
+                                            }
+                                        }
+
+                                        if (!post.songTitle.isNullOrBlank()) {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = Color(0xFF6C5CE7).copy(alpha = 0.15f),
+                                            ) {
+                                                Text(
+                                                    text = "🎵 ${post.songTitle} • ${post.songArtist ?: "Unknown"}",
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                                    color = Color(0xFFA29BFE),
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = post.content,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = Color.White.copy(alpha = 0.9f),
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // Private Messages Audit List
+
+                            if (filteredMessages.isEmpty()) {
+                                item {
+                                    Text("No private messages found.", color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(20.dp))
+                                }
+                            }
+
+                            items(filteredMessages) { msg ->
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = Color(0xFF1C1E2D),
+                                    border = BorderStroke(1.dp, Color(0xFF00B894).copy(alpha = 0.2f)),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color(0xFF00B894), modifier = Modifier.size(14.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "${msg.senderName} ➔ ${msg.receiverName}",
+                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                                    color = Color.White,
+                                                )
+                                            }
+
+                                            Text(
+                                                text = formatTimestamp(msg.timestamp),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.White.copy(alpha = 0.4f),
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xFF13141F),
+                                            modifier = Modifier.fillMaxWidth(),
+                                        ) {
+                                            Text(
+                                                text = msg.message,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = Color.White.copy(alpha = 0.95f),
+                                                modifier = Modifier.padding(10.dp),
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                        ) {
+                                            Text(
+                                                text = "From: ${msg.senderEmail.ifBlank { msg.senderId.take(8) }}",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                                color = Color.White.copy(alpha = 0.4f),
+                                            )
+                                            Text(
+                                                text = "To: ${msg.receiverEmail.ifBlank { msg.receiverId.take(8) }}",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                                color = Color.White.copy(alpha = 0.4f),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                3 -> {
                     // Enhanced Announcement & Notification Center
                     val notificationTypes = listOf(
                         "GENERAL" to "📢 General",
@@ -1133,7 +1698,7 @@ fun AdminDashboardScreen(
                         }
                     }
                 }
-                3 -> {
+                4 -> {
                     // App Releases & In-App Update Management
                     LazyColumn(
                         modifier = Modifier
@@ -1339,6 +1904,61 @@ fun AdminDashboardScreen(
                 }
             }
         }
+    }
+
+    // Activity Event Audit Inspector Modal
+    inspectingActivity?.let { act ->
+        AlertDialog(
+            onDismissRequest = { inspectingActivity = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Info, contentDescription = null, tint = Color(0xFF00CEC9))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Activity Audit Record", color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    val formattedFullTime = remember(act.timestamp) {
+                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.getDefault()).format(Date(act.timestamp))
+                    }
+                    AuditKeyValue("Action / Event Type", act.activityType, Color(0xFF00CEC9))
+                    AuditKeyValue("Event Title", act.title)
+                    AuditKeyValue("User Name", act.userName.ifBlank { "Guest" })
+                    AuditKeyValue("User Email", act.userEmail.ifBlank { "N/A" })
+                    AuditKeyValue("User ID", act.userId)
+                    AuditKeyValue("Device Model", act.deviceModel.ifBlank { "Android" })
+                    AuditKeyValue("Location", act.locationCity.ifBlank { "Global" })
+                    AuditKeyValue("Full Timestamp", formattedFullTime)
+                    if (act.details.isNotBlank()) {
+                        AuditKeyValue("Payload / Details", act.details, Color(0xFF81ECEC))
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        activitySearchQuery = act.userName
+                        inspectingActivity = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C5CE7)),
+                ) {
+                    Text("Filter Ledger By User")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { inspectingActivity = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A2D3E)),
+                ) {
+                    Text("Close", color = Color.White)
+                }
+            },
+            containerColor = Color(0xFF1A1B28),
+        )
     }
 
     // Highly Structured User Audit Modal

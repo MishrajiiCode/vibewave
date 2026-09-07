@@ -98,4 +98,21 @@ object ActivityTracker {
             details = "User generated a new custom playlist",
         )
     }
+
+    fun onCommunityPost(songTitle: String?, rating: Int, content: String) {
+        val titleText = if (!songTitle.isNullOrBlank()) "Reviewed: $songTitle ($rating★)" else "Community Post ($rating★)"
+        FirestoreManager.logActivity(
+            activityType = "COMMUNITY_POST",
+            title = titleText,
+            details = content.take(120),
+        )
+    }
+
+    fun onPrivateMessage(recipientName: String, preview: String) {
+        FirestoreManager.logActivity(
+            activityType = "PRIVATE_MESSAGE",
+            title = "Direct Message to $recipientName",
+            details = preview.take(120),
+        )
+    }
 }

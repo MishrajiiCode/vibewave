@@ -163,6 +163,7 @@ object FirestoreManager {
         val details: String = "",
         val timestamp: Long = System.currentTimeMillis(),
         val locationCity: String = "",
+        val deviceModel: String = "",
     ) {
         fun toMap(): Map<String, Any?> = mapOf(
             "id" to id,
@@ -174,6 +175,7 @@ object FirestoreManager {
             "details" to details,
             "timestamp" to timestamp,
             "locationCity" to locationCity,
+            "deviceModel" to deviceModel,
         )
     }
 
@@ -409,6 +411,7 @@ object FirestoreManager {
         cityOverride: String? = null,
     ) {
         val user = _currentUser.value
+        val fallbackDevice = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
         val log = ActivityLog(
             id = UUID.randomUUID().toString(),
             userId = user?.uid ?: "guest",
@@ -419,6 +422,7 @@ object FirestoreManager {
             details = details,
             timestamp = System.currentTimeMillis(),
             locationCity = cityOverride ?: user?.currentLocation?.city.orEmpty(),
+            deviceModel = user?.deviceModel?.ifBlank { fallbackDevice } ?: fallbackDevice,
         )
 
         scope.launch {

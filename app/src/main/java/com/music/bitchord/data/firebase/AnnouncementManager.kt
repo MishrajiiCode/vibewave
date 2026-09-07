@@ -73,6 +73,7 @@ object AnnouncementManager {
             "MUSIC_RECOMMENDATION" -> "🎵"
             "APP_UPDATE" -> "🚀"
             "PERSONAL_WISH" -> "💌"
+            "DIRECT_MESSAGE" -> "💬"
             "MOTIVATION" -> "⚡"
             "AI_PICKS" -> "✨"
             else -> "📢"

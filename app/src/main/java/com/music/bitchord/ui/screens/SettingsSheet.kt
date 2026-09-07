@@ -8,6 +8,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -461,24 +462,25 @@ fun SettingsScreen(
                 val isSelected = selectedCategory == cat
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    color = if (isSelected) Color(0xFF6C5CE7) else Color(0xFF1E2030),
+                    border = BorderStroke(1.dp, if (isSelected) Color(0xFFA29BFE) else Color.White.copy(alpha = 0.08f)),
                     modifier = Modifier.clickable { selectedCategory = cat },
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             imageVector = cat.icon,
                             contentDescription = null,
-                            tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                            modifier = Modifier.size(15.dp),
+                            tint = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = cat.label,
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.85f),
                         )
                     }
                 }
@@ -1896,17 +1898,17 @@ private fun DownloadQualitySheet(
 
 // ---- Building blocks --------------------------------------------------------
 
-internal val GroupShape = RoundedCornerShape(14.dp)
+internal val GroupShape = RoundedCornerShape(18.dp)
 internal val GROUP_INSET = 16.dp
-internal val ROW_INSET = 16.dp
-internal val ICON_SIZE = 22.dp
-internal val ICON_GAP = 14.dp
+internal val ROW_INSET = 14.dp
+internal val ICON_SIZE = 20.dp
+internal val ICON_GAP = 12.dp
 
-/** Where a row's text starts — dividers are inset to match, as on iOS. */
-internal val TEXT_INSET = ROW_INSET + ICON_SIZE + ICON_GAP
+/** Where a row's text starts — dividers are inset to match. */
+internal val TEXT_INSET = ROW_INSET + 36.dp + ICON_GAP
 
 /**
- * One inset card of rows, with an uppercase header above and an optional
+ * One inset card of rows, with an elegant header above and an optional
  * plain-language [footer] below. Rows are separated by [RowDivider].
  */
 @Composable
@@ -1915,41 +1917,49 @@ internal fun SettingsGroup(
     footer: String? = null,
     content: @Composable () -> Unit,
 ) {
-    if (header != null) {
-        Text(
-            text = header.uppercase(Locale.ROOT),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(
-                start = GROUP_INSET + 4.dp,
-                end = GROUP_INSET,
-                top = 26.dp,
-                bottom = 8.dp,
-            ),
-        )
-    } else {
-        Spacer(Modifier.height(26.dp))
-    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = GROUP_INSET)
-            .clip(GroupShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .padding(horizontal = GROUP_INSET, vertical = 4.dp),
     ) {
-        content()
-    }
-    if (footer != null) {
-        Text(
-            text = footer,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(
-                start = GROUP_INSET + 4.dp,
-                end = GROUP_INSET + 4.dp,
-                top = 8.dp,
-            ),
-        )
+        if (header != null) {
+            Text(
+                text = header,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(
+                    start = 6.dp,
+                    end = 6.dp,
+                    top = 14.dp,
+                    bottom = 6.dp,
+                ),
+            )
+        } else {
+            Spacer(Modifier.height(8.dp))
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = GroupShape,
+            color = Color(0xFF161826),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.07f)),
+        ) {
+            Column {
+                content()
+            }
+        }
+        if (footer != null) {
+            Text(
+                text = footer,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.padding(
+                    start = 8.dp,
+                    end = 8.dp,
+                    top = 6.dp,
+                    bottom = 4.dp,
+                ),
+            )
+        }
     }
 }
 
@@ -1958,7 +1968,7 @@ internal fun RowDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(start = TEXT_INSET),
         thickness = 0.5.dp,
-        color = MaterialTheme.colorScheme.outline,
+        color = Color.White.copy(alpha = 0.06f),
     )
 }
 
@@ -1989,31 +1999,41 @@ internal fun SettingsRow(
             .fillMaxWidth()
             .then(if (onClick != null && enabled) Modifier.clickable(onClick = onClick) else Modifier)
             .alpha(if (enabled) 1f else 0.45f)
-            .heightIn(min = 52.dp)
-            .padding(horizontal = ROW_INSET, vertical = 12.dp),
+            .heightIn(min = 54.dp)
+            .padding(horizontal = ROW_INSET, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (iconPainter != null) {
-            Icon(
-                painter = iconPainter,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.size(ICON_SIZE),
-            )
-        } else if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.size(ICON_SIZE),
-            )
+        if (iconPainter != null || icon != null) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (iconPainter != null) {
+                    Icon(
+                        painter = iconPainter,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(ICON_SIZE),
+                    )
+                } else if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(ICON_SIZE),
+                    )
+                }
+            }
+            Spacer(Modifier.width(ICON_GAP))
         }
-        Spacer(Modifier.width(ICON_GAP))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -2028,8 +2048,8 @@ internal fun SettingsRow(
             } else if (subtitle != null) {
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     maxLines = 5,
                 )
             }
@@ -2041,7 +2061,7 @@ internal fun SettingsRow(
             if (value != null) {
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )

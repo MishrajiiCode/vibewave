@@ -163,7 +163,7 @@ object AdminManager {
             }
         }
 
-    suspend fun fetchGlobalActivities(limit: Long = 60): List<FirestoreManager.ActivityLog> =
+    suspend fun fetchGlobalActivities(limit: Long = 150): List<FirestoreManager.ActivityLog> =
         withContext(Dispatchers.IO) {
             try {
                 val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext emptyList()
@@ -184,11 +184,85 @@ object AdminManager {
                         details = doc.getString("details").orEmpty(),
                         timestamp = doc.getLong("timestamp") ?: 0L,
                         locationCity = doc.getString("locationCity").orEmpty(),
+                        deviceModel = doc.getString("deviceModel").orEmpty(),
                     )
                 }
             } catch (t: Throwable) {
                 Log.w(TAG, "Failed to fetch global activities: ${t.message}")
                 emptyList()
+            }
+        }
+
+    suspend fun fetchCommunityPosts(limit: Long = 80): List<CommunityManager.CommunityPost> =
+        withContext(Dispatchers.IO) {
+            try {
+                val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext emptyList()
+                val snapshot = db.collection("community_posts")
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(limit)
+                    .get()
+                    .await()
+
+                snapshot.documents.mapNotNull { doc ->
+                    CommunityManager.CommunityPost(
+                        id = doc.id,
+                        userId = doc.getString("userId") ?: "",
+                        userName = doc.getString("userName") ?: "Anonymous",
+                        userEmail = doc.getString("userEmail") ?: "",
+                        content = doc.getString("content") ?: "",
+                        songTitle = doc.getString("songTitle"),
+                        songArtist = doc.getString("songArtist"),
+                        songId = doc.getString("songId"),
+                        rating = (doc.getLong("rating") ?: 5L).toInt(),
+                        timestamp = doc.getLong("timestamp") ?: 0L,
+                        likesCount = (doc.getLong("likesCount") ?: 0L).toInt(),
+                    )
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to fetch community posts: ${t.message}")
+                emptyList()
+            }
+        }
+
+    suspend fun fetchPrivateMessagesAudit(limit: Long = 100): List<CommunityManager.PrivateMessage> =
+        withContext(Dispatchers.IO) {
+            try {
+                val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext emptyList()
+                val snapshot = db.collection("private_messages")
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(limit)
+                    .get()
+                    .await()
+
+                snapshot.documents.mapNotNull { doc ->
+                    CommunityManager.PrivateMessage(
+                        id = doc.id,
+                        senderId = doc.getString("senderId") ?: "",
+                        senderName = doc.getString("senderName") ?: "",
+                        senderEmail = doc.getString("senderEmail") ?: "",
+                        receiverId = doc.getString("receiverId") ?: "",
+                        receiverName = doc.getString("receiverName") ?: "",
+                        receiverEmail = doc.getString("receiverEmail") ?: "",
+                        message = doc.getString("message") ?: "",
+                        timestamp = doc.getLong("timestamp") ?: 0L,
+                        read = doc.getBoolean("read") ?: false,
+                    )
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to fetch private messages audit: ${t.message}")
+                emptyList()
+            }
+        }
+
+    suspend fun deleteCommunityPost(postId: String): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val db = FirestoreManager.getFirestoreOrNull() ?: return@withContext false
+                db.collection("community_posts").document(postId).delete().await()
+                true
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to delete community post: ${t.message}")
+                false
             }
         }
 

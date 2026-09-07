@@ -215,6 +215,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.music.bitchord.ui.screens.SplashScreen
+import com.music.bitchord.ui.screens.CommunitySheet
 import java.util.Locale
 
 /** A full first screen of a native YouTube Music radio before AutoPlay tops it up. */
@@ -535,6 +536,7 @@ private fun BitChordApp(
     // doesn't bring it back — only a fresh launch does.
     var updateDialogShown by rememberSaveable { mutableStateOf(false) }
     var showUpdateDialog by remember { mutableStateOf(false) }
+    var showCommunitySheet by remember { mutableStateOf(false) }
     val updateAvailable by viewModel.updateAvailable.collectAsStateWithLifecycle()
 
     /**
@@ -2278,6 +2280,7 @@ private fun BitChordApp(
                     },
                     refreshing = currentFeed != null && currentFeed in refreshing,
                     pullFraction = { currentPull?.distanceFraction ?: 0f },
+                    onCommunityClick = { showCommunitySheet = true },
                     onBack = when {
                         showDiscord -> ({ showDiscord = false })
                         showHistory -> ({ showHistory = false })
@@ -3040,6 +3043,13 @@ private fun BitChordApp(
                     },
                 )
             }
+        }
+
+        if (showCommunitySheet) {
+            BackHandler { showCommunitySheet = false }
+            CommunitySheet(
+                onDismiss = { showCommunitySheet = false },
+            )
         }
 
         if (showLyricsSources) {
