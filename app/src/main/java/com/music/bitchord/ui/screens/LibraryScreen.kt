@@ -171,6 +171,13 @@ fun LibraryScreen(
                             videoId = null,
                             browseId = "local:all",
                         ),
+                        ShelfItem(
+                            title = "AI Picks ✨",
+                            subtitle = "Smart AI Curation",
+                            thumbnailUrl = null,
+                            videoId = null,
+                            browseId = "ai:picks",
+                        ),
                     ) + downloadedPlaylists.map { playlist ->
                         ShelfItem(
                             title = playlist.title,
@@ -196,6 +203,40 @@ fun LibraryScreen(
                     onItemClick = onShelfItemClick,
                     onItemLongPress = onShelfItemLongPress,
                     onShowAll = { onShowAll(onDeviceShelf) },
+                )
+            }
+            item(key = "shelf:ai_picks") {
+                val aiShelf = HomeShelf(
+                    title = "AI Smart Playlists ✨",
+                    items = listOf(
+                        ShelfItem(
+                            title = "AI Picks: Daily Mix 🔮",
+                            subtitle = "Tuned to your rhythm & top artists",
+                            thumbnailUrl = null,
+                            videoId = null,
+                            browseId = "ai:daily_mix",
+                        ),
+                        ShelfItem(
+                            title = "AI Picks: Heart Beats 💖",
+                            subtitle = "Liked songs & kindred vibes",
+                            thumbnailUrl = null,
+                            videoId = null,
+                            browseId = "ai:liked_rec",
+                        ),
+                        ShelfItem(
+                            title = "AI Picks: Heavy Rotation ⚡",
+                            subtitle = "Your most frequent tracks",
+                            thumbnailUrl = null,
+                            videoId = null,
+                            browseId = "ai:frequent",
+                        ),
+                    ),
+                )
+                LibraryGridShelf(
+                    shelf = aiShelf,
+                    onItemClick = onShelfItemClick,
+                    onItemLongPress = onShelfItemLongPress,
+                    onShowAll = { onShowAll(aiShelf) },
                 )
             }
             if (!signedIn) {

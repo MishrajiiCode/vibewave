@@ -83,13 +83,34 @@ object AppUpdateChecker {
             val tag = release["tag_name"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
             val url = release["html_url"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
             val apkUrl = apkAssetUrl(release)
-            val notes = release["body"]?.jsonPrimitive?.contentOrNull
+            val rawNotes = release["body"]?.jsonPrimitive?.contentOrNull
             val latest = tag.removePrefix("v")
-            if (isNewer(latest, BuildConfig.VERSION_NAME)) {
+            val notes = formatReleaseNotes(rawNotes, latest)
+            val current = BuildConfig.VERSION_NAME.removePrefix("v")
+            if (isNewer(latest, current)) {
                 _available.value = UpdateInfo(latest, url, apkUrl, notes)
                 context?.let { showUpdateNotification(it, latest) }
+            } else {
+                _available.value = null
             }
         }
+    }
+
+    fun formatReleaseNotes(rawNotes: String?, version: String): String {
+        val trimmed = rawNotes?.trim().orEmpty()
+        if (trimmed.isBlank() || trimmed.startsWith("**Full Changelog**") || trimmed.length < 30) {
+            return """
+                ### 🚀 What's New in VibeWave v$version
+
+                - 🎨 **Minimalist Spotify & JioSaavn Hybrid Icon**: Sleek modern design featuring circular disc geometry and curved acoustic arcs on deep obsidian (no soundwave clutter).
+                - 🧠 **Smart AI Integration & AI Picks**: Real-time activity tracking based on what you play and like. Dynamically generates smart playlists and curates your **AI Picks** folder.
+                - ⚙️ **Categorized & Organized Settings**: Modular category navigation (Audio & Stream, Playback, Appearance, Downloads & Storage, Account & Backup, Admin & Dev).
+                - 👑 **Structured Admin Telemetry Audit**: Detailed hardware, battery, OS, permission matrix, and location footprints formatted into organized cards.
+                - ✉️ **Direct Personalized Messaging**: Direct custom notifications sent from Admin to user with instant heads-up system tray alerts.
+                - ⚡ **Direct In-App Updates**: One-tap architecture-specific APK downloads and direct package installation.
+            """.trimIndent()
+        }
+        return rawNotes ?: ""
     }
 
     fun showUpdateNotification(context: Context, version: String) {
@@ -242,8 +263,8 @@ object AppUpdateChecker {
 
     /** Numeric, dot-separated comparison — "1.10" outranks "1.9". */
     private fun isNewer(latest: String, current: String): Boolean {
-        val l = latest.split(".").map { it.toIntOrNull() ?: 0 }
-        val c = current.split(".").map { it.toIntOrNull() ?: 0 }
+        val l = latest.removePrefix("v").substringBefore("-").split(".").map { it.toIntOrNull() ?: 0 }
+        val c = current.removePrefix("v").substringBefore("-").split(".").map { it.toIntOrNull() ?: 0 }
         for (i in 0 until maxOf(l.size, c.size)) {
             val a = l.getOrElse(i) { 0 }
             val b = c.getOrElse(i) { 0 }

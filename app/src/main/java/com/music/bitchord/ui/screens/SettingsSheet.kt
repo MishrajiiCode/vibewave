@@ -23,6 +23,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -154,6 +157,16 @@ import java.util.Locale
  * title. Anything with more than two choices opens a sheet rather than pushing
  * a row of chips into the layout.
  */
+enum class SettingsCategory(val label: String, val icon: ImageVector) {
+    ALL("All", Icons.Rounded.Tune),
+    AUDIO("Audio & Stream", Icons.Rounded.GraphicEq),
+    PLAYBACK("Playback", Icons.Rounded.PlaylistPlay),
+    APPEARANCE("Appearance", Icons.Rounded.Brightness4),
+    STORAGE("Downloads & Storage", Icons.Rounded.Download),
+    ACCOUNT("Account & Data", Icons.Rounded.Person),
+    ADMIN("Admin & Dev", Icons.Rounded.AdminPanelSettings),
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -327,6 +340,8 @@ fun SettingsScreen(
         }.getOrNull() ?: "1.0"
     }
 
+    var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.ALL) }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -433,16 +448,54 @@ fun SettingsScreen(
                 }
             }
         }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Modular Settings Category Selector
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(SettingsCategory.values()) { cat ->
+                val isSelected = selectedCategory == cat
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    modifier = Modifier.clickable { selectedCategory = cat },
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = cat.icon,
+                            contentDescription = null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                            modifier = Modifier.size(15.dp),
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = cat.label,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(10.dp))
 
-        SettingsGroup {
-            SettingsRow(
-                icon = Icons.Rounded.Person,
-                title = stringResource(R.string.account_integrations),
-                subtitle = account?.email?.takeIf { it.isNotBlank() }
-                    ?: stringResource(if (signedIn) R.string.signed_in else R.string.not_signed_in),
-                onClick = onAccountScrobbling,
-            )
+        if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.ACCOUNT) {
+            SettingsGroup(header = if (selectedCategory != SettingsCategory.ALL) "Account & Integrations" else null) {
+                SettingsRow(
+                    icon = Icons.Rounded.Person,
+                    title = stringResource(R.string.account_integrations),
+                    subtitle = account?.email?.takeIf { it.isNotBlank() }
+                        ?: stringResource(if (signedIn) R.string.signed_in else R.string.not_signed_in),
+                    onClick = onAccountScrobbling,
+                )
+            }
         }
 
         // The row that used to sit at the top of this group was called
@@ -451,731 +504,733 @@ fun SettingsScreen(
         // above lists that as the module's own row now. Lossless itself is no
         // longer a setting at all — see
         // [SourceResolver.requestForNow][com.music.bitchord.data.sources.SourceResolver.requestForNow].
-        SettingsGroup(header = stringResource(R.string.audio_quality)) {
-            SettingsRow(
-                icon = Icons.Rounded.Extension,
-                title = stringResource(R.string.source),
-                subtitle = stringResource(R.string.sources_subtitle),
-                onClick = onSources,
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.Wifi,
-                title = stringResource(R.string.on_wifi),
-                badge = stringResource(R.string.in_use).takeIf { metered == false },
-                value = wifiQuality.localizedLabel(),
-                onClick = { picking = QualityTarget.WIFI },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.SignalCellularAlt,
-                title = stringResource(R.string.on_mobile_data),
-                badge = stringResource(R.string.in_use).takeIf { metered == true },
-                value = cellularQuality.localizedLabel(),
-                onClick = { picking = QualityTarget.CELLULAR },
-            )
-            RowDivider()
-            // Sits with the quality ceilings rather than with Playback: it
-            // decides which version of a track gets fetched, the same question
-            // the two rows above answer, and not how one is played back.
-            //
-            // Greyed rather than hidden where the device can't decode E-AC-3.
-            // A missing row reads as a feature the app doesn't have; a disabled
-            // one with a reason under it is the difference between "BitChord
-            // has no Atmos" and "this phone has no Dolby decoder", and only the
-            // second is true. The stored preference is left untouched either
-            // way — see [AppSettings.dolbyAtmos].
-            SettingsRow(
-                iconPainter = painterResource(R.drawable.ic_dolby_atmos),
-                title = stringResource(R.string.dolby_atmos),
-                subtitle = stringResource(
-                    if (dolbyAtmosSupported) {
-                        R.string.dolby_atmos_subtitle
-                    } else {
-                        R.string.dolby_atmos_unavailable
-                    },
-                ),
-                enabled = dolbyAtmosSupported,
-                trailing = {
-                    Switch(
-                        checked = dolbyAtmos && dolbyAtmosSupported,
-                        onCheckedChange = AppSettings::setDolbyAtmos,
-                        enabled = dolbyAtmosSupported,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setDolbyAtmos(!dolbyAtmos) },
-            )
-        }
-
-        // Its own group rather than rows bolted onto the two above, because a
-        // download is not a third kind of connection. The ceilings answer "what
-        // does this minute cost"; these answer "what am I keeping, and when may
-        // it be fetched" — and those two questions only make sense read
-        // together, which is what puts them side by side here.
-        SettingsGroup(header = stringResource(R.string.downloads)) {
-            SettingsRow(
-                icon = Icons.Rounded.Download,
-                title = stringResource(R.string.download_quality),
-                subtitle = stringResource(R.string.download_quality_subtitle, downloadQuality.perTrack),
-                value = downloadQuality.localizedLabel(),
-                onClick = { pickingDownloadQuality = true },
-            )
-            // Reads as part of Download quality above it, not as a setting
-            // of its own — same treatment as Play animated cover over
-            // cellular gets under Animated cover art.
-            SettingsSubRow(
-                title = stringResource(R.string.download_wifi_only),
-                checked = wifiOnlyDownloads,
-                onCheckedChange = AppSettings::setWifiOnlyDownloads,
-                badge = stringResource(R.string.blocking).takeIf { wifiOnlyDownloads && metered == true },
-            )
-            SettingsSubRow(
-                title = "Export compatible downloads",
-                checked = exportDownloads,
-                onCheckedChange = AppSettings::setExportDownloads,
-                badge = "Music/BitChord".takeIf { exportDownloads },
-            )
-        }
-
-        SettingsGroup(header = stringResource(R.string.playback)) {
-            SettingsRow(
-                icon = Icons.Rounded.GraphicEq,
-                title = "Output precision",
-                subtitle = buildString {
-                    append(outputStatus.sink)
-                    append(" · ")
-                    append(outputStatus.deviceName)
-                    (outputStatus.actualSampleRateHz ?: outputStatus.sampleRatesHz.firstOrNull())
-                        ?.let { append(" · ${it / 1000.0} kHz") }
-                    append(" · ")
-                    append(AudioOutputStatus.encodingLabel(outputStatus))
-                },
-            )
-            SegmentedControl(
-                options = OutputPcmMode.entries.map(OutputPcmMode::label),
-                selectedIndex = OutputPcmMode.entries.indexOf(outputPcmMode),
-                onSelect = { AppSettings.setOutputPcmMode(OutputPcmMode.entries[it]) },
-                modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 14.dp),
-            )
-            RowDivider()
-            SettingsSubRow(
-                title = "Prefer USB DAC",
-                checked = preferUsbDac,
-                onCheckedChange = AppSettings::setPreferUsbDac,
-                badge = "Connected".takeIf { outputStatus.isUsb },
-            )
-            RowDivider()
-            // Automix decides its own length from each pair of tracks —
-            // tempo, key, structure — so it replaces the manual slider rather
-            // than needing it set to anything first.
-            if (!smartFade) {
-                SliderRow(
-                    icon = Icons.Rounded.Waves,
-                    title = stringResource(R.string.crossfade),
-                    subtitle = stringResource(R.string.crossfade_subtitle),
-                    value = if (crossfade == 0) stringResource(R.string.off) else "${crossfade}s",
-                    sliderValue = crossfade.toFloat(),
-                    onSliderValue = { AppSettings.setCrossfadeSeconds(it.roundToInt()) },
-                    valueRange = 0f..12f,
-                    steps = 11,
-                )
-                RowDivider()
-            }
-            SettingsRow(
-                icon = Icons.Rounded.AutoAwesome,
-                title = stringResource(R.string.automix),
-                subtitle = if (smartFade) {
-                    stringResource(R.string.automix_enabled_subtitle)
-                } else {
-                    stringResource(R.string.automix_disabled_subtitle)
-                },
-                trailing = {
-                    Switch(
-                        checked = smartFade,
-                        onCheckedChange = AppSettings::setSmartFadeEnabled,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setSmartFadeEnabled(!smartFade) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.Tune,
-                title = stringResource(R.string.automix_performance),
-                subtitle = stringResource(R.string.automix_performance_subtitle),
-                value = automixPerformance.localizedLabel(),
-                onClick = { pickingAutomixPerformance = true },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.AutoMirrored.Rounded.VolumeOff,
-                title = stringResource(R.string.skip_silence),
-                subtitle = stringResource(R.string.skip_silence_subtitle),
-                trailing = {
-                    Switch(
-                        checked = skipSilence,
-                        onCheckedChange = AppSettings::setSkipSilence,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setSkipSilence(!skipSilence) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.SurroundSound,
-                title = stringResource(R.string.spatial_audio),
-                subtitle = stringResource(R.string.spatial_audio_subtitle),
-                trailing = {
-                    Switch(
-                        checked = spatialAudio,
-                        onCheckedChange = AppSettings::setSpatialAudio,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setSpatialAudio(!spatialAudio) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.Tune,
-                title = stringResource(R.string.equalizer),
-                subtitle = stringResource(R.string.equalizer_subtitle),
-                onClick = { openEqualizer(context, sessionId) },
-            )
-        }
-
-        SettingsGroup(header = stringResource(R.string.appearance)) {
-            SettingsRow(icon = Icons.Rounded.Brightness4, title = stringResource(R.string.theme))
-            SegmentedControl(
-                options = ThemeMode.entries.map { it.localizedLabel() },
-                selectedIndex = ThemeMode.entries.indexOf(theme),
-                onSelect = { AppSettings.setThemeMode(ThemeMode.entries[it]) },
-                modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.MotionPhotosOff,
-                title = stringResource(R.string.reduce_animation),
-                subtitle = stringResource(R.string.reduce_animation_subtitle),
-                trailing = {
-                    Switch(
-                        checked = reduceAnimation,
-                        onCheckedChange = AppSettings::setReduceAnimation,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setReduceAnimation(!reduceAnimation) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.BlurOff,
-                title = stringResource(R.string.reduce_dynamic_blur),
-                subtitle = stringResource(R.string.reduce_dynamic_blur_subtitle),
-                trailing = {
-                    Switch(
-                        checked = reduceDynamicBlur,
-                        onCheckedChange = AppSettings::setReduceDynamicBlur,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setReduceDynamicBlur(!reduceDynamicBlur) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.AutoAwesome,
-                title = stringResource(R.string.liquid_glass),
-                subtitle = stringResource(
-                    if (liquidGlassSupported) {
-                        R.string.liquid_glass_subtitle
-                    } else {
-                        R.string.liquid_glass_unavailable
-                    },
-                ),
-                enabled = liquidGlassSupported,
-                trailing = {
-                    Switch(
-                        checked = liquidGlass,
-                        onCheckedChange = AppSettings::setLiquidGlass,
-                        enabled = liquidGlassSupported,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setLiquidGlass(!liquidGlass) },
-            )
-            RowDivider()
-            // Left out where the player won't honour it: a window too wide for
-            // the player to fill and too narrow to stand a page beside it keeps
-            // the sleeve either way. A docked pane is a phone's width, so it does
-            // honour it — see [fullBleedArtworkAvailable].
-            if (fullBleedArtworkAvailable(windowWidth)) {
+        if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.AUDIO) {
+            SettingsGroup(header = stringResource(R.string.audio_quality)) {
                 SettingsRow(
-                    icon = Icons.Rounded.Fullscreen,
-                    title = stringResource(R.string.full_screen_cover_art),
-                    subtitle = stringResource(R.string.full_screen_cover_art_subtitle),
-                    trailing = {
-                        Switch(
-                            checked = fullBleedArtwork,
-                            onCheckedChange = AppSettings::setFullBleedArtwork,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
-                        )
-                    },
-                    onClick = { AppSettings.setFullBleedArtwork(!fullBleedArtwork) },
-                )
-                RowDivider()
-            }
-            SettingsRow(
-                icon = Icons.Rounded.Gradient,
-                title = stringResource(R.string.legacy_mesh_gradient),
-                subtitle = stringResource(R.string.legacy_mesh_gradient_subtitle),
-                trailing = {
-                    Switch(
-                        checked = legacyMeshGradient,
-                        onCheckedChange = AppSettings::setLegacyMeshGradient,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setLegacyMeshGradient(!legacyMeshGradient) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.Animation,
-                title = stringResource(R.string.animated_cover_art),
-                subtitle = stringResource(R.string.animated_cover_art_subtitle),
-                trailing = {
-                    Switch(
-                        checked = animatedCanvas,
-                        onCheckedChange = AppSettings::setAnimatedCanvas,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setAnimatedCanvas(!animatedCanvas) },
-            )
-            // Reads as part of the Animated cover art option above it, not
-            // as a separate setting. Nothing to narrow while the clip itself
-            // is off. Defaults to off: a clip loops for as long as its track
-            // plays, so on cellular this is not a one-time video cost but
-            // that cost repeated on every loop — see AppSettings.canvasOverCellular.
-            if (animatedCanvas) {
-                SettingsSubRow(
-                    title = stringResource(R.string.animated_cover_cellular),
-                    checked = canvasOverCellular,
-                    onCheckedChange = AppSettings::setCanvasOverCellular,
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onSpotifyCanvasAuth)
-                        .padding(start = ROW_INSET, end = ROW_INSET, top = 4.dp, bottom = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.integrate_spotify_canvas),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Chevron()
-                }
-            }
-            RowDivider()
-            SettingsRow(
-                icon = Icons.AutoMirrored.Rounded.Notes,
-                title = stringResource(R.string.synced_lyrics),
-                subtitle = stringResource(R.string.synced_lyrics_subtitle),
-                trailing = {
-                    Switch(
-                        checked = syncedLyrics,
-                        onCheckedChange = AppSettings::setSyncedLyrics,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setSyncedLyrics(!syncedLyrics) },
-            )
-            // Nothing to choose between while the feature is off, and the
-            // sources are third-party services being reached on the user's
-            // connection — which is the part worth being able to narrow.
-            if (syncedLyrics) {
-                RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.BlurOn,
-                title = "Blur unfocused lyrics",
-                subtitle = "Keeps the spotlight on the current line",
-                    trailing = {
-                        Switch(
-                            checked = lyricsBlur,
-                            onCheckedChange = AppSettings::setLyricsBlur,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
-                        )
-                    },
-                    onClick = { AppSettings.setLyricsBlur(!lyricsBlur) },
+                    icon = Icons.Rounded.Extension,
+                    title = stringResource(R.string.source),
+                    subtitle = stringResource(R.string.sources_subtitle),
+                    onClick = onSources,
                 )
                 RowDivider()
                 SettingsRow(
-                    icon = Icons.Rounded.Language,
-                    title = stringResource(R.string.lyrics_sources),
-                    subtitle = lyricsSources
-                        .sortedBy { it.ordinal }
-                        .joinToString(", ") { it.label }
-                        .ifEmpty { stringResource(R.string.no_lyrics_sources_enabled) },
-                    trailing = { Chevron() },
-                    onClick = onLyricsSources,
+                    icon = Icons.Rounded.Wifi,
+                    title = stringResource(R.string.on_wifi),
+                    badge = stringResource(R.string.in_use).takeIf { metered == false },
+                    value = wifiQuality.localizedLabel(),
+                    onClick = { picking = QualityTarget.WIFI },
                 )
-            }
-        }
-
-        SettingsGroup(header = stringResource(R.string.performance)) {
-            SettingsRow(
-                icon = BitChordIcons.Performance,
-                title = stringResource(R.string.high_performance_mode),
-                subtitle = if (highPerformanceMode) {
-                    stringResource(R.string.high_performance_active, selectedPerformanceRefreshRate)
-                } else {
-                    stringResource(R.string.high_performance_subtitle)
-                },
-                badge = stringResource(R.string.beta),
-                trailing = {
-                    Switch(
-                        checked = highPerformanceMode,
-                        onCheckedChange = { enabled ->
-                            if (enabled) {
-                                showPerformanceWarning = true
-                            } else {
-                                AppSettings.setHighPerformanceMode(false)
-                            }
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.SignalCellularAlt,
+                    title = stringResource(R.string.on_mobile_data),
+                    badge = stringResource(R.string.in_use).takeIf { metered == true },
+                    value = cellularQuality.localizedLabel(),
+                    onClick = { picking = QualityTarget.CELLULAR },
+                )
+                RowDivider()
+                SettingsRow(
+                    iconPainter = painterResource(R.drawable.ic_dolby_atmos),
+                    title = stringResource(R.string.dolby_atmos),
+                    subtitle = stringResource(
+                        if (dolbyAtmosSupported) {
+                            R.string.dolby_atmos_subtitle
+                        } else {
+                            R.string.dolby_atmos_unavailable
                         },
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = {
-                    if (highPerformanceMode) {
-                        AppSettings.setHighPerformanceMode(false)
-                    } else {
-                        showPerformanceWarning = true
-                    }
-                },
-            )
-            if (highPerformanceMode) {
-                RowDivider()
+                    ),
+                    enabled = dolbyAtmosSupported,
+                    trailing = {
+                        Switch(
+                            checked = dolbyAtmos && dolbyAtmosSupported,
+                            onCheckedChange = AppSettings::setDolbyAtmos,
+                            enabled = dolbyAtmosSupported,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setDolbyAtmos(!dolbyAtmos) },
+                )
+            }
+        }
+
+        if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.STORAGE) {
+            SettingsGroup(header = stringResource(R.string.downloads)) {
                 SettingsRow(
-                    icon = BitChordIcons.FrameRate,
-                    title = stringResource(R.string.refresh_rate),
+                    icon = Icons.Rounded.Download,
+                    title = stringResource(R.string.download_quality),
+                    subtitle = stringResource(R.string.download_quality_subtitle, downloadQuality.perTrack),
+                    value = downloadQuality.localizedLabel(),
+                    onClick = { pickingDownloadQuality = true },
+                )
+                SettingsSubRow(
+                    title = stringResource(R.string.download_wifi_only),
+                    checked = wifiOnlyDownloads,
+                    onCheckedChange = AppSettings::setWifiOnlyDownloads,
+                    badge = stringResource(R.string.blocking).takeIf { wifiOnlyDownloads && metered == true },
+                )
+                SettingsSubRow(
+                    title = "Export compatible downloads",
+                    checked = exportDownloads,
+                    onCheckedChange = AppSettings::setExportDownloads,
+                    badge = "Music/BitChord".takeIf { exportDownloads },
+                )
+            }
+        }
+
+        if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.PLAYBACK) {
+            SettingsGroup(header = stringResource(R.string.playback)) {
+                SettingsRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = "Output precision",
+                    subtitle = buildString {
+                        append(outputStatus.sink)
+                        append(" · ")
+                        append(outputStatus.deviceName)
+                        (outputStatus.actualSampleRateHz ?: outputStatus.sampleRatesHz.firstOrNull())
+                            ?.let { append(" · ${it / 1000.0} kHz") }
+                        append(" · ")
+                        append(AudioOutputStatus.encodingLabel(outputStatus))
+                    },
                 )
                 SegmentedControl(
-                    options = supportedRefreshRates.map { "$it Hz" },
-                    selectedIndex = supportedRefreshRates.indexOf(selectedPerformanceRefreshRate),
-                    onSelect = { index ->
-                        AppSettings.setPerformanceRefreshRate(supportedRefreshRates[index])
-                    },
-                    modifier = Modifier.padding(
-                        start = TEXT_INSET,
-                        end = ROW_INSET,
-                        bottom = 14.dp,
-                    ),
+                    options = OutputPcmMode.entries.map(OutputPcmMode::label),
+                    selectedIndex = OutputPcmMode.entries.indexOf(outputPcmMode),
+                    onSelect = { AppSettings.setOutputPcmMode(OutputPcmMode.entries[it]) },
+                    modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 14.dp),
                 )
-            }
-        }
-
-        SettingsGroup(header = stringResource(R.string.local_music)) {
-            SettingsRow(
-                icon = Icons.Rounded.Folder,
-                title = stringResource(R.string.local_music_folder),
-                subtitle = LocalMediaRepository.selectedFolderLabel(localMusicFolderUri)
-                    ?: stringResource(R.string.all_audio_folders),
-                onClick = { localMusicFolderPicker.launch(null) },
-            )
-            if (localMusicFolderUri.isNotBlank()) {
+                RowDivider()
+                SettingsSubRow(
+                    title = "Prefer USB DAC",
+                    checked = preferUsbDac,
+                    onCheckedChange = AppSettings::setPreferUsbDac,
+                    badge = "Connected".takeIf { outputStatus.isUsb },
+                )
+                RowDivider()
+                // Automix decides its own length from each pair of tracks —
+                // tempo, key, structure — so it replaces the manual slider rather
+                // than needing it set to anything first.
+                if (!smartFade) {
+                    SliderRow(
+                        icon = Icons.Rounded.Waves,
+                        title = stringResource(R.string.crossfade),
+                        subtitle = stringResource(R.string.crossfade_subtitle),
+                        value = if (crossfade == 0) stringResource(R.string.off) else "${crossfade}s",
+                        sliderValue = crossfade.toFloat(),
+                        onSliderValue = { AppSettings.setCrossfadeSeconds(it.roundToInt()) },
+                        valueRange = 0f..12f,
+                        steps = 11,
+                    )
+                    RowDivider()
+                }
+                SettingsRow(
+                    icon = Icons.Rounded.AutoAwesome,
+                    title = stringResource(R.string.automix),
+                    subtitle = if (smartFade) {
+                        stringResource(R.string.automix_enabled_subtitle)
+                    } else {
+                        stringResource(R.string.automix_disabled_subtitle)
+                    },
+                    trailing = {
+                        Switch(
+                            checked = smartFade,
+                            onCheckedChange = AppSettings::setSmartFadeEnabled,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setSmartFadeEnabled(!smartFade) },
+                )
                 RowDivider()
                 SettingsRow(
-                    icon = Icons.Rounded.LibraryMusic,
-                    title = stringResource(R.string.use_all_audio_folders),
-                    subtitle = stringResource(R.string.use_all_audio_folders_subtitle),
-                    onClick = { AppSettings.setLocalMusicFolderUri("") },
+                    icon = Icons.Rounded.Tune,
+                    title = stringResource(R.string.automix_performance),
+                    subtitle = stringResource(R.string.automix_performance_subtitle),
+                    value = automixPerformance.localizedLabel(),
+                    onClick = { pickingAutomixPerformance = true },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.AutoMirrored.Rounded.VolumeOff,
+                    title = stringResource(R.string.skip_silence),
+                    subtitle = stringResource(R.string.skip_silence_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = skipSilence,
+                            onCheckedChange = AppSettings::setSkipSilence,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setSkipSilence(!skipSilence) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.SurroundSound,
+                    title = stringResource(R.string.spatial_audio),
+                    subtitle = stringResource(R.string.spatial_audio_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = spatialAudio,
+                            onCheckedChange = AppSettings::setSpatialAudio,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setSpatialAudio(!spatialAudio) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.Tune,
+                    title = stringResource(R.string.equalizer),
+                    subtitle = stringResource(R.string.equalizer_subtitle),
+                    onClick = { openEqualizer(context, sessionId) },
                 )
             }
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.FilterAlt,
-                title = stringResource(R.string.filter_non_music_audio),
-                subtitle = stringResource(R.string.filter_non_music_audio_subtitle),
-                trailing = {
-                    Switch(
-                        checked = filterNonMusicAudio,
-                        onCheckedChange = AppSettings::setFilterNonMusicAudio,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setFilterNonMusicAudio(!filterNonMusicAudio) },
-            )
         }
 
-        val cacheLimitMb = (cacheLimitBytes / (1024 * 1024)).toInt()
-        SettingsGroup(header = stringResource(R.string.storage)) {
-            SliderRow(
-                icon = Icons.Rounded.Storage,
-                title = stringResource(R.string.song_cache_limit),
-                subtitle = if (cacheLimitMb > CACHE_WARNING_MB) {
-                    stringResource(R.string.song_cache_large_subtitle, formatCacheSize(cacheLimitMb))
-                } else {
-                    stringResource(R.string.song_cache_limit_subtitle)
-                },
-                value = formatCacheSize(cacheLimitMb),
-                sliderValue = cacheLimitMb.toFloat(),
-                onSliderValue = {
-                    AppSettings.setAudioCacheLimitBytes(it.roundToInt().toLong() * 1024 * 1024)
-                },
-                valueRange = (AppSettings.DEFAULT_CACHE_LIMIT_BYTES / (1024 * 1024)).toFloat()..
-                    (AppSettings.MAX_CACHE_LIMIT_BYTES / (1024 * 1024)).toFloat(),
-                steps = 18,
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.DeleteSweep,
-                title = stringResource(R.string.clear_song_cache),
-                subtitle = stringResource(R.string.clear_song_cache_subtitle),
-                onClick = {
-                    AudioCache.clear {
-                        Toast.makeText(context, context.getString(R.string.song_cache_cleared), Toast.LENGTH_SHORT).show()
+        if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.APPEARANCE) {
+            SettingsGroup(header = stringResource(R.string.appearance)) {
+                SettingsRow(icon = Icons.Rounded.Brightness4, title = stringResource(R.string.theme))
+                SegmentedControl(
+                    options = ThemeMode.entries.map { it.localizedLabel() },
+                    selectedIndex = ThemeMode.entries.indexOf(theme),
+                    onSelect = { AppSettings.setThemeMode(ThemeMode.entries[it]) },
+                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.MotionPhotosOff,
+                    title = stringResource(R.string.reduce_animation),
+                    subtitle = stringResource(R.string.reduce_animation_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = reduceAnimation,
+                            onCheckedChange = AppSettings::setReduceAnimation,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setReduceAnimation(!reduceAnimation) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.BlurOff,
+                    title = stringResource(R.string.reduce_dynamic_blur),
+                    subtitle = stringResource(R.string.reduce_dynamic_blur_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = reduceDynamicBlur,
+                            onCheckedChange = AppSettings::setReduceDynamicBlur,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setReduceDynamicBlur(!reduceDynamicBlur) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.AutoAwesome,
+                    title = stringResource(R.string.liquid_glass),
+                    subtitle = stringResource(
+                        if (liquidGlassSupported) {
+                            R.string.liquid_glass_subtitle
+                        } else {
+                            R.string.liquid_glass_unavailable
+                        },
+                    ),
+                    enabled = liquidGlassSupported,
+                    trailing = {
+                        Switch(
+                            checked = liquidGlass,
+                            onCheckedChange = AppSettings::setLiquidGlass,
+                            enabled = liquidGlassSupported,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setLiquidGlass(!liquidGlass) },
+                )
+                RowDivider()
+                // Left out where the player won't honour it: a window too wide for
+                // the player to fill and too narrow to stand a page beside it keeps
+                // the sleeve either way. A docked pane is a phone's width, so it does
+                // honour it — see [fullBleedArtworkAvailable].
+                if (fullBleedArtworkAvailable(windowWidth)) {
+                    SettingsRow(
+                        icon = Icons.Rounded.Fullscreen,
+                        title = stringResource(R.string.full_screen_cover_art),
+                        subtitle = stringResource(R.string.full_screen_cover_art_subtitle),
+                        trailing = {
+                            Switch(
+                                checked = fullBleedArtwork,
+                                onCheckedChange = AppSettings::setFullBleedArtwork,
+                                colors = SwitchDefaults.colors(
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
+                        },
+                        onClick = { AppSettings.setFullBleedArtwork(!fullBleedArtwork) },
+                    )
+                    RowDivider()
+                }
+                SettingsRow(
+                    icon = Icons.Rounded.Gradient,
+                    title = stringResource(R.string.legacy_mesh_gradient),
+                    subtitle = stringResource(R.string.legacy_mesh_gradient_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = legacyMeshGradient,
+                            onCheckedChange = AppSettings::setLegacyMeshGradient,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setLegacyMeshGradient(!legacyMeshGradient) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.Animation,
+                    title = stringResource(R.string.animated_cover_art),
+                    subtitle = stringResource(R.string.animated_cover_art_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = animatedCanvas,
+                            onCheckedChange = AppSettings::setAnimatedCanvas,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setAnimatedCanvas(!animatedCanvas) },
+                )
+                // Reads as part of the Animated cover art option above it, not
+                // as a separate setting. Nothing to narrow while the clip itself
+                // is off. Defaults to off: a clip loops for as long as its track
+                // plays, so on cellular this is not a one-time video cost but
+                // that cost repeated on every loop — see AppSettings.canvasOverCellular.
+                if (animatedCanvas) {
+                    SettingsSubRow(
+                        title = stringResource(R.string.animated_cover_cellular),
+                        checked = canvasOverCellular,
+                        onCheckedChange = AppSettings::setCanvasOverCellular,
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onSpotifyCanvasAuth)
+                            .padding(start = ROW_INSET, end = ROW_INSET, top = 4.dp, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.integrate_spotify_canvas),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Chevron()
                     }
-                },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.DeleteSweep,
-                title = stringResource(R.string.clear_image_cache),
-                subtitle = stringResource(R.string.clear_image_cache_subtitle),
-                onClick = {
-                    val loader = SingletonImageLoader.get(context)
-                    loader.memoryCache?.clear()
-                    loader.diskCache?.clear()
-                    Toast.makeText(context, context.getString(R.string.image_cache_cleared), Toast.LENGTH_SHORT).show()
-                },
-            )
+                }
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.AutoMirrored.Rounded.Notes,
+                    title = stringResource(R.string.synced_lyrics),
+                    subtitle = stringResource(R.string.synced_lyrics_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = syncedLyrics,
+                            onCheckedChange = AppSettings::setSyncedLyrics,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setSyncedLyrics(!syncedLyrics) },
+                )
+                // Nothing to choose between while the feature is off, and the
+                // sources are third-party services being reached on the user's
+                // connection — which is the part worth being able to narrow.
+                if (syncedLyrics) {
+                    RowDivider()
+                    SettingsRow(
+                        icon = Icons.Rounded.BlurOn,
+                        title = "Blur unfocused lyrics",
+                        subtitle = "Keeps the spotlight on the current line",
+                        trailing = {
+                            Switch(
+                                checked = lyricsBlur,
+                                onCheckedChange = AppSettings::setLyricsBlur,
+                                colors = SwitchDefaults.colors(
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
+                        },
+                        onClick = { AppSettings.setLyricsBlur(!lyricsBlur) },
+                    )
+                    RowDivider()
+                    SettingsRow(
+                        icon = Icons.Rounded.Language,
+                        title = stringResource(R.string.lyrics_sources),
+                        subtitle = lyricsSources
+                            .sortedBy { it.ordinal }
+                            .joinToString(", ") { it.label }
+                            .ifEmpty { stringResource(R.string.no_lyrics_sources_enabled) },
+                        trailing = { Chevron() },
+                        onClick = onLyricsSources,
+                    )
+                }
+            }
         }
 
-        SettingsGroup(header = stringResource(R.string.your_data)) {
-            SettingsRow(
-                icon = Icons.Rounded.BarChart,
-                title = stringResource(R.string.replay),
-                subtitle = stringResource(R.string.replay_subtitle),
-                onClick = onOpenReplay,
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.LocalOffer,
-                title = stringResource(R.string.work_out_genres),
-                subtitle = if (replayGenres) {
-                    stringResource(R.string.replay_genres_enabled_subtitle)
-                } else {
-                    stringResource(R.string.replay_genres_disabled_subtitle)
-                },
-                trailing = {
-                    Switch(
-                        checked = replayGenres,
-                        onCheckedChange = AppSettings::setReplayGenres,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
+        if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.PLAYBACK || selectedCategory == SettingsCategory.ADMIN) {
+            SettingsGroup(header = stringResource(R.string.performance)) {
+                SettingsRow(
+                    icon = BitChordIcons.Performance,
+                    title = stringResource(R.string.high_performance_mode),
+                    subtitle = if (highPerformanceMode) {
+                        stringResource(R.string.high_performance_active, selectedPerformanceRefreshRate)
+                    } else {
+                        stringResource(R.string.high_performance_subtitle)
+                    },
+                    badge = stringResource(R.string.beta),
+                    trailing = {
+                        Switch(
+                            checked = highPerformanceMode,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    showPerformanceWarning = true
+                                } else {
+                                    AppSettings.setHighPerformanceMode(false)
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = {
+                        if (highPerformanceMode) {
+                            AppSettings.setHighPerformanceMode(false)
+                        } else {
+                            showPerformanceWarning = true
+                        }
+                    },
+                )
+                if (highPerformanceMode) {
+                    RowDivider()
+                    SettingsRow(
+                        icon = BitChordIcons.FrameRate,
+                        title = stringResource(R.string.refresh_rate),
+                    )
+                    SegmentedControl(
+                        options = supportedRefreshRates.map { "$it Hz" },
+                        selectedIndex = supportedRefreshRates.indexOf(selectedPerformanceRefreshRate),
+                        onSelect = { index ->
+                            AppSettings.setPerformanceRefreshRate(supportedRefreshRates[index])
+                        },
+                        modifier = Modifier.padding(
+                            start = TEXT_INSET,
+                            end = ROW_INSET,
+                            bottom = 14.dp,
                         ),
                     )
-                },
-                onClick = { AppSettings.setReplayGenres(!replayGenres) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.FileUpload,
-                title = stringResource(R.string.export_data),
-                subtitle = exportStatus ?: stringResource(R.string.export_data_subtitle),
-                onClick = { exportPicker.launch(Backup.suggestedName()) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.FileDownload,
-                title = stringResource(R.string.import_data),
-                subtitle = importStatus ?: stringResource(R.string.import_data_subtitle),
-                onClick = { confirmImport = true },
-            )
+                }
+            }
         }
 
-        SettingsGroup(
-            header = stringResource(R.string.miscellaneous),
-            footer = stringResource(R.string.miscellaneous_footer),
-        ) {
-            SettingsRow(
-                icon = Icons.Rounded.PlaylistPlay,
-                title = stringResource(R.string.play_next_on_swipe),
-                subtitle = if (swipeToPlayNext) {
-                    stringResource(R.string.swipe_plays_next)
-                } else {
-                    stringResource(R.string.swipe_adds_to_queue)
-                },
-                trailing = {
-                    Switch(
-                        checked = swipeToPlayNext,
-                        onCheckedChange = AppSettings::setSwipeToPlayNext,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
+        if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.STORAGE) {
+            SettingsGroup(header = stringResource(R.string.local_music)) {
+                SettingsRow(
+                    icon = Icons.Rounded.Folder,
+                    title = stringResource(R.string.local_music_folder),
+                    subtitle = LocalMediaRepository.selectedFolderLabel(localMusicFolderUri)
+                        ?: stringResource(R.string.all_audio_folders),
+                    onClick = { localMusicFolderPicker.launch(null) },
+                )
+                if (localMusicFolderUri.isNotBlank()) {
+                    RowDivider()
+                    SettingsRow(
+                        icon = Icons.Rounded.LibraryMusic,
+                        title = stringResource(R.string.use_all_audio_folders),
+                        subtitle = stringResource(R.string.use_all_audio_folders_subtitle),
+                        onClick = { AppSettings.setLocalMusicFolderUri("") },
                     )
-                },
-                onClick = { AppSettings.setSwipeToPlayNext(!swipeToPlayNext) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.History,
-                title = stringResource(R.string.dont_repeat_songs),
-                subtitle = stringResource(R.string.dont_repeat_songs_subtitle),
-                trailing = {
-                    Switch(
-                        checked = dontRepeatSuggestions,
-                        onCheckedChange = AppSettings::setDontRepeatSuggestions,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setDontRepeatSuggestions(!dontRepeatSuggestions) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.MusicOff,
-                title = stringResource(R.string.stop_music_on_close),
-                subtitle = stringResource(R.string.stop_music_on_close_subtitle),
-                trailing = {
-                    Switch(
-                        checked = stopOnTaskRemoved,
-                        onCheckedChange = AppSettings::setStopOnTaskRemoved,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setStopOnTaskRemoved(!stopOnTaskRemoved) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.VolumeOff,
-                title = stringResource(R.string.hide_volume_bar),
-                subtitle = stringResource(R.string.hide_volume_bar_subtitle),
-                trailing = {
-                    Switch(
-                        checked = hideVolumeBar,
-                        onCheckedChange = AppSettings::setHideVolumeBar,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setHideVolumeBar(!hideVolumeBar) },
-            )
+                }
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.FilterAlt,
+                    title = stringResource(R.string.filter_non_music_audio),
+                    subtitle = stringResource(R.string.filter_non_music_audio_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = filterNonMusicAudio,
+                            onCheckedChange = AppSettings::setFilterNonMusicAudio,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setFilterNonMusicAudio(!filterNonMusicAudio) },
+                )
+            }
+
+            val cacheLimitMb = (cacheLimitBytes / (1024 * 1024)).toInt()
+            SettingsGroup(header = stringResource(R.string.storage)) {
+                SliderRow(
+                    icon = Icons.Rounded.Storage,
+                    title = stringResource(R.string.song_cache_limit),
+                    subtitle = if (cacheLimitMb > CACHE_WARNING_MB) {
+                        stringResource(R.string.song_cache_large_subtitle, formatCacheSize(cacheLimitMb))
+                    } else {
+                        stringResource(R.string.song_cache_limit_subtitle)
+                    },
+                    value = formatCacheSize(cacheLimitMb),
+                    sliderValue = cacheLimitMb.toFloat(),
+                    onSliderValue = {
+                        AppSettings.setAudioCacheLimitBytes(it.roundToInt().toLong() * 1024 * 1024)
+                    },
+                    valueRange = (AppSettings.DEFAULT_CACHE_LIMIT_BYTES / (1024 * 1024)).toFloat()..
+                        (AppSettings.MAX_CACHE_LIMIT_BYTES / (1024 * 1024)).toFloat(),
+                    steps = 18,
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.DeleteSweep,
+                    title = stringResource(R.string.clear_song_cache),
+                    subtitle = stringResource(R.string.clear_song_cache_subtitle),
+                    onClick = {
+                        AudioCache.clear {
+                            Toast.makeText(context, context.getString(R.string.song_cache_cleared), Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.DeleteSweep,
+                    title = stringResource(R.string.clear_image_cache),
+                    subtitle = stringResource(R.string.clear_image_cache_subtitle),
+                    onClick = {
+                        val loader = SingletonImageLoader.get(context)
+                        loader.memoryCache?.clear()
+                        loader.diskCache?.clear()
+                        Toast.makeText(context, context.getString(R.string.image_cache_cleared), Toast.LENGTH_SHORT).show()
+                    },
+                )
+            }
         }
 
-        SettingsGroup(header = stringResource(R.string.language)) {
-            val selectedLanguage = AppCompatDelegate.getApplicationLocales().get(0)?.language
-                ?: Locale.getDefault().language
-            SettingsRow(
-                icon = Icons.Rounded.Language,
-                title = stringResource(R.string.app_language),
-                subtitle = stringResource(languageDisplayNameRes(selectedLanguage)),
-                onClick = onAppLanguage,
-            )
+        if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.ACCOUNT) {
+            SettingsGroup(header = stringResource(R.string.your_data)) {
+                SettingsRow(
+                    icon = Icons.Rounded.BarChart,
+                    title = stringResource(R.string.replay),
+                    subtitle = stringResource(R.string.replay_subtitle),
+                    onClick = onOpenReplay,
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.LocalOffer,
+                    title = stringResource(R.string.work_out_genres),
+                    subtitle = if (replayGenres) {
+                        stringResource(R.string.replay_genres_enabled_subtitle)
+                    } else {
+                        stringResource(R.string.replay_genres_disabled_subtitle)
+                    },
+                    trailing = {
+                        Switch(
+                            checked = replayGenres,
+                            onCheckedChange = AppSettings::setReplayGenres,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setReplayGenres(!replayGenres) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.FileUpload,
+                    title = stringResource(R.string.export_data),
+                    subtitle = exportStatus ?: stringResource(R.string.export_data_subtitle),
+                    onClick = { exportPicker.launch(Backup.suggestedName()) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.FileDownload,
+                    title = stringResource(R.string.import_data),
+                    subtitle = importStatus ?: stringResource(R.string.import_data_subtitle),
+                    onClick = { confirmImport = true },
+                )
+            }
         }
 
-        SettingsGroup(header = "Advanced Options") {
-            SettingsRow(
-                icon = Icons.Rounded.GraphicEq,
-                title = stringResource(R.string.show_nerd_stats),
-                subtitle = stringResource(R.string.show_nerd_stats_subtitle),
-                trailing = {
-                    Switch(
-                        checked = nerdStats,
-                        onCheckedChange = AppSettings::setShowNerdStats,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setShowNerdStats(!nerdStats) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.History,
-                title = "Lyrics Debug Logs",
-                subtitle = "Show live API queries and scraper activity in the lyrics panel",
-                trailing = {
-                    Switch(
-                        checked = showLyricsLogs,
-                        onCheckedChange = AppSettings::setShowLyricsLogs,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onClick = { AppSettings.setShowLyricsLogs(!showLyricsLogs) },
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.AdminPanelSettings,
-                title = "Admin Console",
-                subtitle = "Audit user activities, real-time locations and broadcasts",
-                onClick = onOpenAdmin,
-            )
-            RowDivider()
-            SettingsRow(
-                icon = Icons.Rounded.Person,
-                title = "About Raj Mishra & VibeWave",
-                subtitle = "Lead architect, creator profile and open-source links",
-                onClick = onOpenAbout,
-            )
+        if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.PLAYBACK) {
+            SettingsGroup(
+                header = stringResource(R.string.miscellaneous),
+                footer = stringResource(R.string.miscellaneous_footer),
+            ) {
+                SettingsRow(
+                    icon = Icons.Rounded.PlaylistPlay,
+                    title = stringResource(R.string.play_next_on_swipe),
+                    subtitle = if (swipeToPlayNext) {
+                        stringResource(R.string.swipe_plays_next)
+                    } else {
+                        stringResource(R.string.swipe_adds_to_queue)
+                    },
+                    trailing = {
+                        Switch(
+                            checked = swipeToPlayNext,
+                            onCheckedChange = AppSettings::setSwipeToPlayNext,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setSwipeToPlayNext(!swipeToPlayNext) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.History,
+                    title = stringResource(R.string.dont_repeat_songs),
+                    subtitle = stringResource(R.string.dont_repeat_songs_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = dontRepeatSuggestions,
+                            onCheckedChange = AppSettings::setDontRepeatSuggestions,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setDontRepeatSuggestions(!dontRepeatSuggestions) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.MusicOff,
+                    title = stringResource(R.string.stop_music_on_close),
+                    subtitle = stringResource(R.string.stop_music_on_close_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = stopOnTaskRemoved,
+                            onCheckedChange = AppSettings::setStopOnTaskRemoved,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setStopOnTaskRemoved(!stopOnTaskRemoved) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.VolumeOff,
+                    title = stringResource(R.string.hide_volume_bar),
+                    subtitle = stringResource(R.string.hide_volume_bar_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = hideVolumeBar,
+                            onCheckedChange = AppSettings::setHideVolumeBar,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setHideVolumeBar(!hideVolumeBar) },
+                )
+            }
+        }
+
+        if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.APPEARANCE || selectedCategory == SettingsCategory.ACCOUNT) {
+            SettingsGroup(header = stringResource(R.string.language)) {
+                val selectedLanguage = AppCompatDelegate.getApplicationLocales().get(0)?.language
+                    ?: Locale.getDefault().language
+                SettingsRow(
+                    icon = Icons.Rounded.Language,
+                    title = stringResource(R.string.app_language),
+                    subtitle = stringResource(languageDisplayNameRes(selectedLanguage)),
+                    onClick = onAppLanguage,
+                )
+            }
+        }
+
+        if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.ADMIN) {
+            SettingsGroup(header = "Advanced Options & Developer") {
+                SettingsRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = stringResource(R.string.show_nerd_stats),
+                    subtitle = stringResource(R.string.show_nerd_stats_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = nerdStats,
+                            onCheckedChange = AppSettings::setShowNerdStats,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setShowNerdStats(!nerdStats) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.History,
+                    title = "Lyrics Debug Logs",
+                    subtitle = "Show live API queries and scraper activity in the lyrics panel",
+                    trailing = {
+                        Switch(
+                            checked = showLyricsLogs,
+                            onCheckedChange = AppSettings::setShowLyricsLogs,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setShowLyricsLogs(!showLyricsLogs) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.AdminPanelSettings,
+                    title = "Admin Console",
+                    subtitle = "Audit user activities, real-time locations and broadcasts",
+                    onClick = onOpenAdmin,
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.Person,
+                    title = "About Raj Mishra & VibeWave",
+                    subtitle = "Lead architect, creator profile and open-source links",
+                    onClick = onOpenAbout,
+                )
+            }
         }
 
         Text(

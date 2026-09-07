@@ -25,6 +25,7 @@ object ActivityTracker {
 
     fun onSongPlay(song: Song) {
         FirestoreManager.recordPlay(song)
+        com.music.bitchord.data.ai.AiPicksManager.onSongPlayed(song)
         FirestoreManager.logActivity(
             activityType = "SONG_PLAY",
             title = "Playing: ${song.title}",
@@ -44,6 +45,7 @@ object ActivityTracker {
     fun onSongSkip(song: Song?) {
         if (song == null) return
         FirestoreManager.recordSkip(song)
+        com.music.bitchord.data.ai.AiPicksManager.onSongSkipped(song)
         FirestoreManager.logActivity(
             activityType = "SONG_SKIP",
             title = "Skipped: ${song.title}",
@@ -53,6 +55,7 @@ object ActivityTracker {
 
     fun onSongLike(song: Song, isLiked: Boolean) {
         FirestoreManager.recordLike(song, isLiked)
+        com.music.bitchord.data.ai.AiPicksManager.onSongLiked(song, isLiked)
         val action = if (isLiked) "Liked" else "Unliked"
         FirestoreManager.logActivity(
             activityType = "SONG_RATING",

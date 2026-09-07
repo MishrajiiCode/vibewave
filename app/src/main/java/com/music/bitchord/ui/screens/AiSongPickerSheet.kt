@@ -328,6 +328,67 @@ fun AiSongPickerSheet(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
+            Spacer(modifier = Modifier.height(16.dp))
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable {
+                        scope.launch {
+                            val smartPicks = com.music.bitchord.data.ai.AiPicksManager.generateSmartPicks()
+                            if (smartPicks.isNotEmpty()) {
+                                onPlayQueue(smartPicks)
+                                onDismissRequest()
+                            }
+                        }
+                    },
+                color = Color(0xFF6C5CE7).copy(alpha = 0.15f),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF6C5CE7)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.AutoAwesome,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Play Smart AI Picks",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White,
+                            )
+                            Text(
+                                text = "Instant mix tuned to your played & liked tracks",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF81ECEC),
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Rounded.PlayArrow,
+                        contentDescription = null,
+                        tint = Color(0xFF81ECEC),
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
 
             // Recommendation Result Card
             recommendation?.let { rec ->

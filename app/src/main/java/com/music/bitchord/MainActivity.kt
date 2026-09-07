@@ -228,6 +228,7 @@ class MainActivity : AppCompatActivity() {
             com.music.bitchord.data.firebase.FirestoreManager.init(applicationContext)
             com.music.bitchord.data.firebase.ActivityTracker.onAppOpen()
             com.music.bitchord.data.firebase.AnnouncementManager.init(applicationContext)
+            com.music.bitchord.data.ai.AiPicksManager.init(applicationContext)
         }
         lifecycleScope.launch {
             runCatching {

@@ -1871,6 +1871,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         else UiState.Success(songs)
                     }
                 }
+                browseId.startsWith("ai:") -> {
+                    val songs = com.music.bitchord.data.ai.AiPicksManager.getSongsForBrowseId(browseId)
+                    if (songs.isEmpty()) {
+                        com.music.bitchord.data.ai.AiPicksManager.refreshSmartCuration()
+                        val refreshed = com.music.bitchord.data.ai.AiPicksManager.getSongsForBrowseId(browseId)
+                        if (refreshed.isEmpty()) {
+                            UiState.Error("AI is actively learning your taste. Play or like a few tracks to build your AI Picks!")
+                        } else {
+                            UiState.Success(refreshed)
+                        }
+                    } else {
+                        UiState.Success(songs)
+                    }
+                }
                 resolved == BrowseType.ARTIST -> {
                     YtMusicRepository.artistPage(browseId).fold(
                         onSuccess = { page ->
