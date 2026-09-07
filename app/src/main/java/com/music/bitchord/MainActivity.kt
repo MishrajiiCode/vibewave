@@ -298,10 +298,10 @@ class MainActivity : AppCompatActivity() {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     BitChordApp(darkTheme = darkTheme, windowWidth = maxWidth, appBackdrop = appBackdrop)
 
-                    // 3-second animated Splash Screen on app launch
+                    // 5.5-second animated Splash Screen on app launch
                     var showSplash by remember { mutableStateOf(true) }
                     LaunchedEffect(Unit) {
-                        delay(3000L)
+                        delay(5500L)
                         showSplash = false
                     }
                     androidx.compose.animation.AnimatedVisibility(
