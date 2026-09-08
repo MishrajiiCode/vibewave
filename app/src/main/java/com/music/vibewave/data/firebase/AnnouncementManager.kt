@@ -33,9 +33,14 @@ object AnnouncementManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private const val TAG = "AnnouncementManager"
     private const val CHANNEL_ID = "vibewave_announcements"
-    private const val CHANNEL_NAME = "VibeWave Announcements & Messages"
+    private const val CHANNEL_NAME = "VibeWave Announcements"
+    private const val DM_CHANNEL_ID = "vibewave_direct_messages"
+    private const val DM_CHANNEL_NAME = "Direct Messages"
     private const val UPDATE_CHANNEL_ID = "vibewave_updates"
     private const val UPDATE_CHANNEL_NAME = "VibeWave App Updates"
+    private const val MUSIC_CHANNEL_ID = "vibewave_music_picks"
+    private const val MUSIC_CHANNEL_NAME = "Music Recommendations"
+    private const val GROUP_KEY = "com.music.vibewave.NOTIFICATIONS"
     private const val PREFS_NAME = "vibewave_announcement_prefs"
     private const val KEY_LAST_SEEN_TIME = "last_seen_announcement_time"
 
@@ -100,19 +105,35 @@ object AnnouncementManager {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+            // Channel: Global Announcements from Admin
             val announcementChannel = NotificationChannel(
                 CHANNEL_ID,
                 CHANNEL_NAME,
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Direct messages, festival greetings, and music recommendations from Raj Mishra (Admin)"
+                description = "Festival greetings, motivation, and broadcasts from Raj Mishra (Admin)"
                 enableLights(true)
                 lightColor = 0xFF7C4DFF.toInt()
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 200, 100, 200)
+                group = GROUP_KEY
             }
-            manager.createNotificationChannel(announcementChannel)
 
+            // Channel: 1-on-1 Direct Messages (WhatsApp style)
+            val dmChannel = NotificationChannel(
+                DM_CHANNEL_ID,
+                DM_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Personal messages from other VibeWave community users"
+                enableLights(true)
+                lightColor = 0xFF00BFA5.toInt()
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 150, 80, 150)
+                group = GROUP_KEY
+            }
+
+            // Channel: App Updates (GitHub Releases)
             val updateChannel = NotificationChannel(
                 UPDATE_CHANNEL_ID,
                 UPDATE_CHANNEL_NAME,
@@ -123,8 +144,32 @@ object AnnouncementManager {
                 lightColor = 0xFF00E5FF.toInt()
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 250, 150, 250)
+                group = GROUP_KEY
             }
+
+            // Channel: AI Music Picks / Contextual Music
+            val musicChannel = NotificationChannel(
+                MUSIC_CHANNEL_ID,
+                MUSIC_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Personalized music suggestions and AI-curated vibes"
+                enableLights(false)
+                enableVibration(false)
+                group = GROUP_KEY
+            }
+
+            // Notification group for VibeWave
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                manager.createNotificationChannelGroup(
+                    android.app.NotificationChannelGroup(GROUP_KEY, "VibeWave")
+                )
+            }
+
+            manager.createNotificationChannel(announcementChannel)
+            manager.createNotificationChannel(dmChannel)
             manager.createNotificationChannel(updateChannel)
+            manager.createNotificationChannel(musicChannel)
         }
     }
 
@@ -317,7 +362,12 @@ object AnnouncementManager {
                 else -> "📢"
             }
 
-            val channelId = if (isUpdate || type.uppercase() == "APP_UPDATE") UPDATE_CHANNEL_ID else CHANNEL_ID
+            val channelId = when {
+                isUpdate || type.uppercase() == "APP_UPDATE" -> UPDATE_CHANNEL_ID
+                type.uppercase() == "DIRECT_MESSAGE" -> DM_CHANNEL_ID
+                type.uppercase() == "MUSIC_RECOMMENDATION" || type.uppercase() == "AI_PICKS" -> MUSIC_CHANNEL_ID
+                else -> CHANNEL_ID
+            }
             val formattedTitle = "$emoji $title"
             val summaryText = if (isUpdate) "VibeWave • Update Available" else "VibeWave • $author"
 
@@ -354,7 +404,12 @@ object AnnouncementManager {
                 }
                 .setContentTitle(formattedTitle)
                 .setContentText(message)
-                .setSubText(if (isUpdate) "Update Available" else "Admin Alert")
+                .setSubText(when {
+                    isUpdate || type.uppercase() == "APP_UPDATE" -> "Update Available"
+                    type.uppercase() == "DIRECT_MESSAGE" -> "New Message"
+                    else -> "VibeWave"
+                })
+                .setGroup(GROUP_KEY)
                 .setStyle(bigTextStyle)
                 .setColor(0xFF7C4DFF.toInt())
                 .setColorized(true)

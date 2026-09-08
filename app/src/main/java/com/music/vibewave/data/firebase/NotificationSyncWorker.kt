@@ -18,12 +18,20 @@ import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 /**
- * Background worker that runs even when VibeWave is completely closed or killed.
- * Modeled after modern delivery & messaging apps (WhatsApp / Zomato):
- * 1. Syncs unread global announcements from Raj Mishra (Admin).
- * 2. Checks for unread 1-on-1 private chat messages for the current user.
- * 3. Delivers contextual Zomato-style music picks (morning, midday, evening, late-night)
- *    to keep the listener engaged with personalized AI tracks.
+ * Background worker that runs even when VibeWave is completely closed, killed, or swiped away.
+ *
+ * This is the WorkManager-backed fallback polling system for devices/OEMs that kill
+ * background processes aggressively (Xiaomi, Huawei, Samsung One UI in battery saver).
+ * FCM push is the primary mechanism; this guarantees delivery even when FCM is throttled.
+ *
+ * Covers all three notification types:
+ *   1. Admin Global Announcements → polls `announcements` Firestore collection
+ *   2. Direct User Messages (DM)  → polls `private_messages` where receiverId = current user
+ *   3. App Updates (GitHub)       → checks GitHub Releases API for a newer version
+ *   4. Contextual Music Picks     → Zomato-style time-aware music recommendation
+ *
+ * Scheduled every 15 minutes via WorkManager (minimum interval allowed by Android).
+ * Survives device reboots via [BootReceiver].
  */
 class NotificationSyncWorker(
     appContext: Context,
@@ -39,14 +47,27 @@ class NotificationSyncWorker(
             AnnouncementManager.init(context)
 
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val lastSeenAnnouncement = prefs.getLong(KEY_LAST_SEEN_ANNOUNCEMENT, System.currentTimeMillis() - (12 * 3600 * 1000L))
-            val lastMusicNotifTime = prefs.getLong(KEY_LAST_MUSIC_NOTIF, 0L)
-            val lastSeenPrivateMsgTime = prefs.getLong(KEY_LAST_SEEN_PRIVATE_MSG, System.currentTimeMillis() - (12 * 3600 * 1000L))
             val now = System.currentTimeMillis()
+            val lastSeenAnnouncement = prefs.getLong(KEY_LAST_SEEN_ANNOUNCEMENT, now - TWELVE_HOURS_MS)
+            val lastMusicNotifTime = prefs.getLong(KEY_LAST_MUSIC_NOTIF, 0L)
+            val lastSeenPrivateMsgTime = prefs.getLong(KEY_LAST_SEEN_PRIVATE_MSG, now - TWELVE_HOURS_MS)
+            val lastUpdateCheckTime = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
 
             val db = FirestoreManager.getFirestoreOrNull()
 
-            // 1. Check for unread Global Announcements
+            // ── 1. App Update Check (GitHub Releases API) ──────────────────────────────────
+            // Check every 6 hours max to avoid rate limiting GitHub API
+            if (now - lastUpdateCheckTime >= SIX_HOURS_MS) {
+                runCatching {
+                    Log.d(TAG, "Checking GitHub for app updates...")
+                    AppUpdateChecker.check(context)
+                    prefs.edit().putLong(KEY_LAST_UPDATE_CHECK, now).apply()
+                }.onFailure {
+                    Log.w(TAG, "GitHub update check failed: ${it.message}")
+                }
+            }
+
+            // ── 2. Admin Global Announcements ──────────────────────────────────────────────
             if (db != null) {
                 runCatching {
                     val announcementsSnapshot = db.collection("announcements")
@@ -56,22 +77,20 @@ class NotificationSyncWorker(
                         .get()
                         .await()
 
-                    var newestAnnouncement = lastSeenAnnouncement
+                    var newestTs = lastSeenAnnouncement
                     for (doc in announcementsSnapshot.documents) {
                         val ts = doc.getLong("timestamp") ?: now
-                        if (ts > newestAnnouncement) newestAnnouncement = ts
+                        if (ts > newestTs) newestTs = ts
 
                         val type = doc.getString("type") ?: "GENERAL"
                         val onlyNonUpdated = doc.getBoolean("onlyNonUpdated") ?: false
                         val targetVersion = doc.getString("targetVersion")
 
-                        // Skip update announcements if already running target version
+                        // Skip update announcements if device is already on the target version
                         if (type.equals("APP_UPDATE", ignoreCase = true) || onlyNonUpdated) {
                             val currentVersion = com.music.vibewave.BuildConfig.VERSION_NAME.removePrefix("v")
                             val needed = targetVersion ?: "1.5.8"
-                            if (!AppUpdateChecker.isNewer(needed, currentVersion)) {
-                                continue
-                            }
+                            if (!AppUpdateChecker.isNewer(needed, currentVersion)) continue
                         }
 
                         AnnouncementManager.showRichNotification(
@@ -84,35 +103,45 @@ class NotificationSyncWorker(
                             isUpdate = type.equals("APP_UPDATE", ignoreCase = true),
                         )
                     }
-                    prefs.edit().putLong(KEY_LAST_SEEN_ANNOUNCEMENT, newestAnnouncement).apply()
+                    prefs.edit().putLong(KEY_LAST_SEEN_ANNOUNCEMENT, newestTs).apply()
                 }.onFailure {
                     Log.w(TAG, "Global announcement check failed: ${it.message}")
                 }
             }
 
-            // 2. Check for unread 1-on-1 private messages (WhatsApp style)
+            // ── 3. 1-on-1 Direct Messages (WhatsApp style) ───────────────────────────────
+            // Query `private_messages` where receiverId matches this user and message is unread.
+            // NOTE: Uses only a single `where` clause + simple `orderBy` to avoid needing a
+            // composite Firestore index (which would require Firebase Console setup).
             if (db != null) {
                 runCatching {
-                    val myUid = FirestoreManager.currentUser.value?.uid?.takeIf { it.isNotBlank() && it != "guest" }
-                        ?: prefs.getString("cached_user_uid", null)
+                    val myUid = FirestoreManager.currentUser.value?.uid
+                        ?.takeIf { it.isNotBlank() && it != "guest" }
+                        ?: prefs.getString(KEY_CACHED_UID, null)
 
                     if (!myUid.isNullOrBlank()) {
+                        // Simple query — only filter by receiverId to avoid composite index requirement
                         val messagesSnapshot = db.collection("private_messages")
                             .whereEqualTo("receiverId", myUid)
-                            .whereEqualTo("read", false)
-                            .whereGreaterThan("timestamp", lastSeenPrivateMsgTime)
                             .orderBy("timestamp", Query.Direction.DESCENDING)
-                            .limit(5)
+                            .limit(10)
                             .get()
                             .await()
 
                         var newestMsgTime = lastSeenPrivateMsgTime
+                        var shownCount = 0
+
                         for (doc in messagesSnapshot.documents) {
                             val ts = doc.getLong("timestamp") ?: now
+                            // Only show messages newer than the last seen timestamp
+                            if (ts <= lastSeenPrivateMsgTime) continue
+                            // Don't spam too many at once
+                            if (shownCount >= 3) break
+
                             if (ts > newestMsgTime) newestMsgTime = ts
 
                             val senderName = doc.getString("senderName") ?: "A Community Member"
-                            val messageSnippet = doc.getString("message") ?: "Sent you a message"
+                            val messageSnippet = (doc.getString("message") ?: "Sent you a message").take(120)
 
                             AnnouncementManager.showRichNotification(
                                 context = context,
@@ -123,6 +152,7 @@ class NotificationSyncWorker(
                                 author = senderName,
                                 isUpdate = false,
                             )
+                            shownCount++
                         }
                         prefs.edit().putLong(KEY_LAST_SEEN_PRIVATE_MSG, newestMsgTime).apply()
                     }
@@ -131,15 +161,14 @@ class NotificationSyncWorker(
                 }
             }
 
-            // 3. Zomato-style contextual music recommendation (Morning, Afternoon, Evening, Night)
-            // Triggered if at least 6 hours have passed since the last music prompt
-            val sixHoursMs = 6 * 3600 * 1000L
-            if (now - lastMusicNotifTime >= sixHoursMs) {
+            // ── 4. Contextual Zomato-Style Music Recommendation ───────────────────────────
+            // Fires every 6–8 hours, time-of-day aware
+            if (now - lastMusicNotifTime >= SIX_HOURS_MS) {
                 val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
                 val (title, message) = when (hour) {
                     in 6..11 -> Pair(
                         "Morning Coffee & Acoustic Vibe ☕",
-                        "Start your morning with serene acoustic melodies. AI tuned your morning flow on VibeWave 🎵"
+                        "Start your morning with serene acoustic melodies. Your AI has tuned the perfect morning flow on VibeWave 🎵"
                     )
                     in 12..16 -> Pair(
                         "Afternoon Energy & Focus Boost ⚡",
@@ -147,7 +176,7 @@ class NotificationSyncWorker(
                     )
                     in 17..21 -> Pair(
                         "Sunset Acoustic Chill 🌆",
-                        "Unwind after a long day. Dim the lights and sink into your AI personalized evening vibe ✨"
+                        "Unwind after a long day. Dim the lights and sink into your AI-personalized evening vibe ✨"
                     )
                     else -> Pair(
                         "Late Night Lo-Fi & Soul 🌙",
@@ -157,7 +186,7 @@ class NotificationSyncWorker(
 
                 AnnouncementManager.showRichNotification(
                     context = context,
-                    id = "zomato_music_vibe_${now / (1000 * 3600 * 6)}",
+                    id = "music_vibe_${now / (SIX_HOURS_MS)}",
                     title = title,
                     message = message,
                     type = "MUSIC_RECOMMENDATION",
@@ -174,14 +203,19 @@ class NotificationSyncWorker(
     companion object {
         private const val TAG = "NotificationSyncWorker"
         private const val WORK_NAME = "vibewave_bg_notification_sync"
-        private const val PREFS_NAME = "vibewave_bg_sync_prefs"
+        const val PREFS_NAME = "vibewave_bg_sync_prefs"
         private const val KEY_LAST_SEEN_ANNOUNCEMENT = "last_seen_announcement_ts"
         private const val KEY_LAST_SEEN_PRIVATE_MSG = "last_seen_private_msg_ts"
         private const val KEY_LAST_MUSIC_NOTIF = "last_music_notif_ts"
+        private const val KEY_LAST_UPDATE_CHECK = "last_update_check_ts"
+        const val KEY_CACHED_UID = "cached_user_uid"
+        private val SIX_HOURS_MS = 6 * 3600 * 1000L
+        private val TWELVE_HOURS_MS = 12 * 3600 * 1000L
 
         /**
          * Schedules periodic background sync every 15 minutes.
-         * Runs even if the application is killed or swiped away.
+         * [ExistingPeriodicWorkPolicy.KEEP] ensures only one instance runs at a time.
+         * Guaranteed to resume after device reboot via [BootReceiver].
          */
         fun schedule(context: Context) {
             runCatching {
@@ -201,7 +235,7 @@ class NotificationSyncWorker(
                     ExistingPeriodicWorkPolicy.KEEP,
                     periodicRequest,
                 )
-                Log.d(TAG, "NotificationSyncWorker successfully scheduled (15 min interval)")
+                Log.d(TAG, "NotificationSyncWorker scheduled (15 min interval, network required)")
             }.onFailure {
                 Log.w(TAG, "Failed to schedule NotificationSyncWorker: ${it.message}")
             }

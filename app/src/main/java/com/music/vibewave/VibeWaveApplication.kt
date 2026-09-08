@@ -37,15 +37,44 @@ class VibeWaveApplication : Application(), SingletonImageLoader.Factory {
             if (com.google.firebase.FirebaseApp.getApps(this).isEmpty()) {
                 com.google.firebase.FirebaseApp.initializeApp(this)
             }
-            // Initialize Announcement & Rich Notification Channels
+            // Initialize Announcement & Rich Notification Channels (all 4: announcements, DMs, updates, music)
             com.music.vibewave.data.firebase.AnnouncementManager.init(this)
 
-            // Subscribe to FCM global broadcast topics
-            com.google.firebase.messaging.FirebaseMessaging.getInstance().subscribeToTopic("announcements")
-            com.google.firebase.messaging.FirebaseMessaging.getInstance().subscribeToTopic("all_users")
-            com.google.firebase.messaging.FirebaseMessaging.getInstance().subscribeToTopic("vibewave_updates")
+            // Subscribe to FCM global broadcast topics for server-side push delivery
+            val messaging = com.google.firebase.messaging.FirebaseMessaging.getInstance()
+            messaging.subscribeToTopic("announcements")
+            messaging.subscribeToTopic("all_users")
+            messaging.subscribeToTopic("vibewave_updates")
 
-            // Schedule periodic background worker for closed-app notification sync & Zomato-style music picks
+            // Fetch and save the FCM token so the backend can send targeted DM/update push
+            // to this specific device even when the app is completely closed
+            messaging.token.addOnSuccessListener { token ->
+                if (!token.isNullOrBlank()) {
+                    getSharedPreferences(
+                        com.music.vibewave.data.firebase.NotificationSyncWorker.PREFS_NAME,
+                        android.content.Context.MODE_PRIVATE
+                    ).edit().putString("fcm_token", token).apply()
+                    com.music.vibewave.data.firebase.FirestoreManager.saveFcmToken(token)
+                }
+            }
+
+            // Cache the user UID locally whenever they log in, so WorkManager background
+            // polling can check for new DMs even when the app process is killed
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                com.music.vibewave.data.firebase.FirestoreManager.currentUser.collect { user ->
+                    if (user != null && user.uid.isNotBlank() && user.uid != "guest") {
+                        getSharedPreferences(
+                            com.music.vibewave.data.firebase.NotificationSyncWorker.PREFS_NAME,
+                            android.content.Context.MODE_PRIVATE
+                        ).edit().putString(
+                            com.music.vibewave.data.firebase.NotificationSyncWorker.KEY_CACHED_UID,
+                            user.uid
+                        ).apply()
+                    }
+                }
+            }
+
+            // Schedule periodic background worker for closed-app notification sync & music picks
             com.music.vibewave.data.firebase.NotificationSyncWorker.schedule(this)
 
             // Initialize intelligent on-device AI curation

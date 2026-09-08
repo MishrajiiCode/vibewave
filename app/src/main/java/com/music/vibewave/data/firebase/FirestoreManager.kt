@@ -328,18 +328,31 @@ object FirestoreManager {
         if (token.isBlank()) return
         val user = _currentUser.value
         _currentUser.value = user?.copy(fcmToken = token)
-        if (user != null && user.uid.isNotBlank() && user.uid != "guest") {
+        // Resolve UID: from in-memory user, or from shared prefs cache (set when user logged in)
+        val uid = user?.uid?.takeIf { it.isNotBlank() && it != "guest" }
+            ?: prefs?.getString(KEY_USER_ID, null)?.takeIf { it.isNotBlank() }
+        if (!uid.isNullOrBlank()) {
             scope.launch {
                 try {
                     val db = getFirestoreOrNull() ?: return@launch
-                    db.collection(USERS_COLLECTION).document(user.uid)
-                        .set(mapOf("fcmToken" to token, "lastActive" to System.currentTimeMillis()), SetOptions.merge())
+                    db.collection(USERS_COLLECTION).document(uid)
+                        .set(
+                            mapOf(
+                                "fcmToken" to token,
+                                "lastActive" to System.currentTimeMillis(),
+                                "platform" to "android",
+                                "appVersion" to BuildConfig.VERSION_NAME,
+                            ),
+                            SetOptions.merge()
+                        )
                         .await()
-                    Log.d(TAG, "FCM token synced to Firestore for: ${user.email}")
+                    Log.d(TAG, "FCM token synced to Firestore for uid: $uid")
                 } catch (t: Throwable) {
                     Log.w(TAG, "Failed to sync FCM token: ${t.message}")
                 }
             }
+        } else {
+            Log.d(TAG, "FCM token cached locally; will sync when user logs in")
         }
     }
 
