@@ -1872,16 +1872,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
                 browseId.startsWith("ai:") -> {
-                    val songs = com.music.bitchord.data.ai.AiPicksManager.getSongsForBrowseId(browseId)
+                    val meta = com.music.bitchord.data.ai.AiPicksManager.getMetaForBrowseId(browseId)
+                    name = meta.title
+                    credit = meta.subtitle
+                    description = meta.description
+                    val songs = com.music.bitchord.data.ai.AiPicksManager.ensureSongsForBrowseId(browseId)
                     if (songs.isEmpty()) {
-                        com.music.bitchord.data.ai.AiPicksManager.refreshSmartCuration()
-                        val refreshed = com.music.bitchord.data.ai.AiPicksManager.getSongsForBrowseId(browseId)
-                        if (refreshed.isEmpty()) {
-                            UiState.Error("AI is actively learning your taste. Play or like a few tracks to build your AI Picks!")
-                        } else {
-                            UiState.Success(refreshed)
-                        }
+                        UiState.Error("AI is generating your personalized mix. Please play a track or tap retry!")
                     } else {
+                        artwork = songs.firstOrNull()?.thumbnailUrl ?: thumbnailUrl
                         UiState.Success(songs)
                     }
                 }

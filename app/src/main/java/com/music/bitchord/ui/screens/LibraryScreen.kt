@@ -171,24 +171,9 @@ fun LibraryScreen(
                             videoId = null,
                             browseId = "local:all",
                         ),
-                        ShelfItem(
-                            title = "AI Picks ✨",
-                            subtitle = "Smart AI Curation",
-                            thumbnailUrl = null,
-                            videoId = null,
-                            browseId = "ai:picks",
-                        ),
                     ) + downloadedPlaylists.map { playlist ->
                         ShelfItem(
                             title = playlist.title,
-                            // The credit the playlist was downloaded with,
-                            // because this is also what the page it opens
-                            // bills itself by — see `headerLines`, which
-                            // reads the kind and the owner back out of it.
-                            // Saying "Downloaded playlist" here instead would
-                            // make that header read "Downloaded playlist" over
-                            // "PLAYLIST • 12 SONGS", and the shelf this card
-                            // is on already says where it lives.
                             subtitle = playlist.subtitle.ifBlank {
                                 stringResource(R.string.downloaded_playlist)
                             },
@@ -207,28 +192,50 @@ fun LibraryScreen(
             }
             item(key = "shelf:ai_picks") {
                 val aiShelf = HomeShelf(
-                    title = "AI Smart Playlists ✨",
+                    title = "AI Neural Music Studio ✨",
+                    subtitle = "Tuned to your rhythm & acoustic preference",
                     items = listOf(
                         ShelfItem(
-                            title = "AI Picks: Daily Mix 🔮",
-                            subtitle = "Tuned to your rhythm & top artists",
+                            title = "AI Smart Picks ✨",
+                            subtitle = "Tuned to your listening flow",
+                            thumbnailUrl = null,
+                            videoId = null,
+                            browseId = "ai:picks",
+                        ),
+                        ShelfItem(
+                            title = "Daily AI Mix 🔮",
+                            subtitle = "Circadian rhythm & top artists",
                             thumbnailUrl = null,
                             videoId = null,
                             browseId = "ai:daily_mix",
                         ),
                         ShelfItem(
-                            title = "AI Picks: Heart Beats 💖",
+                            title = "Heart Beats AI 💖",
                             subtitle = "Liked songs & kindred vibes",
                             thumbnailUrl = null,
                             videoId = null,
                             browseId = "ai:liked_rec",
                         ),
                         ShelfItem(
-                            title = "AI Picks: Heavy Rotation ⚡",
-                            subtitle = "Your most frequent tracks",
+                            title = "AI Smart Station 🚀",
+                            subtitle = "20-track dynamic journey",
+                            thumbnailUrl = null,
+                            videoId = null,
+                            browseId = "ai:station",
+                        ),
+                        ShelfItem(
+                            title = "Heavy Rotation AI ⚡",
+                            subtitle = "Your most repeated tracks",
                             thumbnailUrl = null,
                             videoId = null,
                             browseId = "ai:frequent",
+                        ),
+                        ShelfItem(
+                            title = "Circadian Wave 🌅",
+                            subtitle = "Real-time diurnal vibe",
+                            thumbnailUrl = null,
+                            videoId = null,
+                            browseId = "ai:circadian",
                         ),
                     ),
                 )

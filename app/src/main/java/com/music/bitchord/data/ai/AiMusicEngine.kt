@@ -471,7 +471,7 @@ object AiMusicEngine {
         return "$score% neural match · Calibrated for $context (${energy.label} · ${energy.speedLabel})."
     }
 
-    private fun SearchResult.toSongOrNull(): Song? = when (this) {
+    internal fun SearchResult.toSongOrNull(): Song? = when (this) {
         is SearchResult.Track -> this.song
         is SearchResult.TopTrack -> this.song
         else -> null

@@ -37,8 +37,21 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
             if (com.google.firebase.FirebaseApp.getApps(this).isEmpty()) {
                 com.google.firebase.FirebaseApp.initializeApp(this)
             }
+            // Initialize Announcement & Rich Notification Channels
+            com.music.bitchord.data.firebase.AnnouncementManager.init(this)
+
+            // Subscribe to FCM global broadcast topics
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().subscribeToTopic("announcements")
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().subscribeToTopic("all_users")
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().subscribeToTopic("vibewave_updates")
+
+            // Schedule periodic background worker for closed-app notification sync & Zomato-style music picks
+            com.music.bitchord.data.firebase.NotificationSyncWorker.schedule(this)
+
+            // Initialize intelligent on-device AI curation
+            com.music.bitchord.data.ai.AiPicksManager.init(this)
         }.onFailure {
-            android.util.Log.w("BitChordApplication", "FirebaseApp init skipped: ${it.message}")
+            android.util.Log.w("BitChordApplication", "Firebase / Background Worker init skipped: ${it.message}")
         }
         // PlaybackService shares this process, so seeding the cookie here means
         // stream resolution is authenticated from the first play onwards.

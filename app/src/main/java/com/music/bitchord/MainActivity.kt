@@ -558,6 +558,12 @@ private fun BitChordApp(
         if (activity?.intent?.getBooleanExtra("open_update_dialog", false) == true) {
             showUpdateDialog = true
         }
+        if (activity?.intent?.getBooleanExtra("open_community", false) == true) {
+            showCommunitySheet = true
+        }
+        if (activity?.intent?.getBooleanExtra("open_ai_picks", false) == true) {
+            viewModel.openDetail("ai:picks", "AI Smart Picks ✨")
+        }
     }
     val query by viewModel.query.collectAsStateWithLifecycle()
     val results by viewModel.results.collectAsStateWithLifecycle()

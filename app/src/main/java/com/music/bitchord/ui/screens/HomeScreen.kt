@@ -48,6 +48,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Radio
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.border
 import com.music.bitchord.ui.icons.BitChordIcons
 import com.music.bitchord.R
 import coil3.compose.AsyncImage
@@ -421,8 +430,9 @@ internal fun ShelfCard(
     Column(
         modifier = modifier.combinedClickable(onClick = onClick, onLongClick = onLongPress),
     ) {
-        when (item.browseId) {
-            "local:downloads" -> {
+        val browseId = item.browseId
+        when {
+            browseId == "local:downloads" -> {
                 val palette = remember { MeshPalette(listOf(Color(0xFF1E3C72), Color(0xFF2A5298))) }
                 Box(
                     modifier = Modifier
@@ -445,7 +455,7 @@ internal fun ShelfCard(
                     )
                 }
             }
-            "local:all" -> {
+            browseId == "local:all" -> {
                 val palette = remember { MeshPalette(listOf(Color(0xFF134E5E), Color(0xFF71B280))) }
                 Box(
                     modifier = Modifier
@@ -467,6 +477,9 @@ internal fun ShelfCard(
                         modifier = Modifier.size(40.dp),
                     )
                 }
+            }
+            browseId != null && browseId.startsWith("ai:") -> {
+                AiShelfCardCover(browseId = browseId)
             }
             else -> {
                 AsyncImage(
@@ -512,5 +525,111 @@ internal fun ShelfCard(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+@Composable
+internal fun AiShelfCardCover(browseId: String) {
+    val (colors, icon, badge) = when (browseId) {
+        "ai:picks" -> Triple(
+            listOf(Color(0xFF6A11CB), Color(0xFF2575FC), Color(0xFF00F2FE)),
+            Icons.Rounded.AutoAwesome,
+            "AI PICKS ✨",
+        )
+        "ai:daily_mix" -> Triple(
+            listOf(Color(0xFF8E2DE2), Color(0xFF4A00E0), Color(0xFFF000FF)),
+            Icons.Rounded.GraphicEq,
+            "DAILY MIX 🔮",
+        )
+        "ai:liked_rec" -> Triple(
+            listOf(Color(0xFFFF0844), Color(0xFFFF4E50), Color(0xFFF9D423)),
+            Icons.Rounded.Favorite,
+            "HEART BEATS 💖",
+        )
+        "ai:station" -> Triple(
+            listOf(Color(0xFF0052D4), Color(0xFF4364F7), Color(0xFF6FB1FC)),
+            Icons.Rounded.Radio,
+            "AI STATION 🚀",
+        )
+        "ai:frequent" -> Triple(
+            listOf(Color(0xFFFF8008), Color(0xFFFFC837), Color(0xFFFF3E00)),
+            Icons.Rounded.Bolt,
+            "ROTATION ⚡",
+        )
+        "ai:circadian" -> Triple(
+            listOf(Color(0xFF141E30), Color(0xFF243B55), Color(0xFFFF8008)),
+            Icons.Rounded.WbSunny,
+            "CIRCADIAN 🌅",
+        )
+        else -> Triple(
+            listOf(Color(0xFF7C4DFF), Color(0xFF00E5FF)),
+            Icons.Rounded.AutoAwesome,
+            "AI SMART ✨",
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Brush.linearGradient(colors))
+            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Ambient glowing circular backdrop
+        Box(
+            modifier = Modifier
+                .size(70.dp)
+                .clip(RoundedCornerShape(35.dp))
+                .background(Color.White.copy(alpha = 0.16f)),
+        )
+
+        // Center Hero Icon
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(42.dp),
+        )
+
+        // Top-right micro chip
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(8.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(Color.Black.copy(alpha = 0.40f))
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+        ) {
+            Text(
+                text = "AI",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 9.sp,
+                    color = Color.White,
+                ),
+            )
+        }
+
+        // Bottom title badge
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 10.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Black.copy(alpha = 0.55f))
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+        ) {
+            Text(
+                text = badge,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.5.sp,
+                    fontSize = 10.sp,
+                    color = Color.White,
+                ),
+            )
+        }
     }
 }

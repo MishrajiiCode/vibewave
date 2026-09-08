@@ -287,8 +287,14 @@ object AnnouncementManager {
                 putExtra("from_announcement", true)
                 putExtra("announcement_id", id)
                 putExtra("announcement_type", type)
-                if (isUpdate) {
+                if (isUpdate || type.equals("APP_UPDATE", ignoreCase = true)) {
                     putExtra("open_update_dialog", true)
+                }
+                if (type.equals("DIRECT_MESSAGE", ignoreCase = true)) {
+                    putExtra("open_community", true)
+                }
+                if (type.equals("MUSIC_RECOMMENDATION", ignoreCase = true) || type.equals("AI_PICKS", ignoreCase = true)) {
+                    putExtra("open_ai_picks", true)
                 }
             }
 
@@ -304,8 +310,10 @@ object AnnouncementManager {
                 "FESTIVAL_WISH" -> "🎊"
                 "BIRTHDAY_WISH" -> "🎂"
                 "MUSIC_RECOMMENDATION" -> "🎵"
+                "AI_PICKS" -> "✨"
                 "APP_UPDATE" -> "🚀"
                 "PERSONAL_WISH" -> "💖"
+                "DIRECT_MESSAGE" -> "💬"
                 else -> "📢"
             }
 
@@ -327,7 +335,8 @@ object AnnouncementManager {
 
             val actionButtonTitle = when (type.uppercase()) {
                 "APP_UPDATE" -> "Update Now 🚀"
-                "MUSIC_RECOMMENDATION" -> "Listen Now 🎵"
+                "DIRECT_MESSAGE" -> "Reply Now 💬"
+                "MUSIC_RECOMMENDATION", "AI_PICKS" -> "Play AI Picks 🎵"
                 else -> "Open VibeWave ✨"
             }
 

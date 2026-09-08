@@ -45,8 +45,8 @@ android {
         // Haze falls back to a translucent scrim below that.
         minSdk = 26
         targetSdk = 36
-        versionCode = 20
-        versionName = "1.5.7"
+        versionCode = 21
+        versionName = "1.5.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -302,6 +302,9 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-messaging")
+
+    // ---- Background WorkManager (Closed-app notification sync & Zomato-style music picks) ----
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     // ---- Location Services ----
     implementation("com.google.android.gms:play-services-location:21.3.0")
