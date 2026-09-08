@@ -36,7 +36,7 @@ val lastfmSecret: String = (
     ).trim()
 
 android {
-    namespace = "com.music.bitchord"
+    namespace = "com.music.vibewave"
     compileSdk = 36
 
     defaultConfig {
