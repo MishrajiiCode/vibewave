@@ -89,7 +89,7 @@ class NotificationSyncWorker(
                         // Skip update announcements if device is already on the target version
                         if (type.equals("APP_UPDATE", ignoreCase = true) || onlyNonUpdated) {
                             val currentVersion = com.music.vibewave.BuildConfig.VERSION_NAME.removePrefix("v")
-                            val needed = targetVersion ?: "1.5.8"
+                            val needed = targetVersion ?: currentVersion
                             if (!AppUpdateChecker.isNewer(needed, currentVersion)) continue
                         }
 
