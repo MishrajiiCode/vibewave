@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 fun AiBannerCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    onPromptStudioClick: (() -> Unit)? = null,
 ) {
     val gradient = Brush.horizontalGradient(
         colors = listOf(
@@ -128,10 +129,49 @@ fun AiBannerCard(
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Smart song matchmaker tailored to your mood",
+                            text = "Smart song matchmaker & natural language studio",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.75f),
                         )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF6C5CE7).copy(alpha = 0.35f))
+                                    .clickable(onClick = onClick)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                            ) {
+                                Text(
+                                    text = "🎧 Vibe Match",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White,
+                                )
+                            }
+                            if (onPromptStudioClick != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                listOf(Color(0xFFEC4899), Color(0xFF8B5CF6))
+                                            )
+                                        )
+                                        .clickable(onClick = onPromptStudioClick)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                                ) {
+                                    Text(
+                                        text = "✨ Prompt Studio",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 

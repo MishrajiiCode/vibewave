@@ -1,6 +1,7 @@
 package com.music.vibewave.ui.screens
 
 import android.Manifest
+import android.content.Context
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -98,7 +99,6 @@ fun UserOnboardingDialog(
                 val permissions = mutableListOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.RECORD_AUDIO,
                 )
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     permissions.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -108,8 +108,16 @@ fun UserOnboardingDialog(
         }
     }
 
+    val handleDismiss = {
+        context.getSharedPreferences("vibewave_user_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("onboarding_skipped", true)
+            .apply()
+        onDismiss()
+    }
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = handleDismiss,
         confirmButton = {
             Button(
                 onClick = submitSetup,
@@ -133,7 +141,7 @@ fun UserOnboardingDialog(
             }
         },
         dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
+            androidx.compose.material3.TextButton(onClick = handleDismiss) {
                 Text("Skip for now", color = Color.White.copy(alpha = 0.65f))
             }
         },

@@ -107,6 +107,7 @@ class VibeWaveApplication : Application(), SingletonImageLoader.Factory {
             CoroutineScope(Dispatchers.IO).launch { Innertube.ensureSessionScope() }
         }
         AppSettings.init(this)
+        com.music.vibewave.playback.AudioEqualizer.init(this)
         SourceRegistry.init(this)
         SearchHistory.init(this)
         LastPlayed.init(this)

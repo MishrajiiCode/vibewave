@@ -15,6 +15,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,6 +56,7 @@ import com.music.vibewave.R
 @Composable
 fun SplashScreen(
     modifier: Modifier = Modifier,
+    onDismiss: () -> Unit = {},
 ) {
     val scale = remember { Animatable(0.65f) }
     val alpha = remember { Animatable(0f) }
@@ -62,22 +65,21 @@ fun SplashScreen(
     LaunchedEffect(Unit) {
         scale.animateTo(
             targetValue = 1.0f,
-            animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+            animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
         )
     }
 
     LaunchedEffect(Unit) {
         alpha.animateTo(
             targetValue = 1.0f,
-            animationSpec = tween(durationMillis = 700),
+            animationSpec = tween(durationMillis = 400),
         )
     }
 
     LaunchedEffect(Unit) {
-        // Smoothly fills across the 5.5-second splash interval
         progress.animateTo(
             targetValue = 1.0f,
-            animationSpec = tween(durationMillis = 5200, easing = LinearEasing),
+            animationSpec = tween(durationMillis = 1200, easing = LinearEasing),
         )
     }
 
@@ -140,6 +142,11 @@ fun SplashScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss,
+            )
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(

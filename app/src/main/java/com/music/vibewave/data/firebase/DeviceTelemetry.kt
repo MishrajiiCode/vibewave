@@ -170,11 +170,7 @@ object DeviceTelemetry {
     )
 
     private fun getPermissionsStatus(context: Context): PermissionsStatus {
-        val mic = if (ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.RECORD_AUDIO
-            ) == PackageManager.PERMISSION_GRANTED
-        ) "GRANTED" else "DENIED"
+        val mic = "NOT_REQUIRED"
 
         val fineLoc = ContextCompat.checkSelfPermission(
             context,

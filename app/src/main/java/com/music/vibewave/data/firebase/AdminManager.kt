@@ -18,17 +18,27 @@ import java.util.UUID
 object AdminManager {
 
     private const val TAG = "AdminManager"
-    private const val MASTER_PASSCODE = "rajmishra2026"
-    private const val MASTER_EMAIL = "mishrajiicode@gmail.com"
+    private const val MASTER_HASH_1 = "01cae2742dd39c0d4119f7c2a10f674d36cb8855f6bf59d63cac286c4e96d107"
+    private const val MASTER_HASH_2 = "99ed19d502ded5ee5495175b8697bb50f0a9ce874f65b725ad55b02adddbeace"
 
     private val _isAuthenticated = MutableStateFlow(false)
     val isAuthenticated = _isAuthenticated.asStateFlow()
 
+    private fun sha256(input: String): String {
+        return try {
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val digest = md.digest(input.toByteArray(Charsets.UTF_8))
+            digest.joinToString("") { "%02x".format(it) }
+        } catch (e: Throwable) {
+            ""
+        }
+    }
+
     fun authenticate(passcodeOrEmail: String): Boolean {
         val trimmed = passcodeOrEmail.trim()
-        val success = trimmed == MASTER_PASSCODE ||
-                trimmed.equals(MASTER_EMAIL, ignoreCase = true) ||
-                trimmed == "rajmishra"
+        val hash = sha256(trimmed)
+        val hashLower = sha256(trimmed.lowercase())
+        val success = hash == MASTER_HASH_1 || hashLower == MASTER_HASH_1 || hashLower == MASTER_HASH_2
         _isAuthenticated.value = success
         return success
     }

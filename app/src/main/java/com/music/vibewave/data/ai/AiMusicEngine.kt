@@ -471,6 +471,106 @@ object AiMusicEngine {
         return "$score% neural match · Calibrated for $context (${energy.label} · ${energy.speedLabel})."
     }
 
+    data class PromptVibeResult(
+        val prompt: String,
+        val detectedMood: String,
+        val detectedTempo: String,
+        val keyThemes: List<String>,
+        val songs: List<Song>,
+    )
+
+    /**
+     * Synthesizes a high-precision custom playlist from any freeform natural language prompt
+     * (e.g. "Late night highway drive in cyberpunk Tokyo", "Rainy Sunday coffee & acoustic soul").
+     */
+    suspend fun generateFromPrompt(
+        prompt: String,
+        maxCount: Int = 20,
+    ): Result<PromptVibeResult> = withContext(Dispatchers.IO) {
+        runCatching {
+            val cleanPrompt = prompt.trim()
+            if (cleanPrompt.isBlank()) {
+                throw IllegalArgumentException("Prompt cannot be empty")
+            }
+
+            val lower = cleanPrompt.lowercase()
+            val detectedMood = when {
+                lower.contains("gym") || lower.contains("workout") || lower.contains("pump") || lower.contains("beast") -> "Intense Gym Kinetic"
+                lower.contains("rain") || lower.contains("cozy") || lower.contains("coffee") || lower.contains("chill") -> "Mellow Atmospheric"
+                lower.contains("study") || lower.contains("code") || lower.contains("focus") || lower.contains("work") -> "Deep Cognitive Flow"
+                lower.contains("night") || lower.contains("midnight") || lower.contains("drive") || lower.contains("neon") -> "Midnight Neon Drive"
+                lower.contains("sad") || lower.contains("heartbreak") || lower.contains("alone") || lower.contains("cry") -> "Melancholic Resonance"
+                lower.contains("party") || lower.contains("dance") || lower.contains("club") || lower.contains("festival") -> "Peak Club Energy"
+                lower.contains("love") || lower.contains("romantic") || lower.contains("date") -> "Emotive Romantic Soul"
+                lower.contains("retro") || lower.contains("80s") || lower.contains("90s") || lower.contains("vintage") -> "Golden Age Nostalgia"
+                lower.contains("phonk") || lower.contains("bass") || lower.contains("drift") -> "Aggressive Heavy Bass"
+                else -> "Neural Dynamic Hybrid"
+            }
+
+            val detectedTempo = when {
+                lower.contains("fast") || lower.contains("hype") || lower.contains("gym") || lower.contains("phonk") -> "High BPM (~135-160 BPM)"
+                lower.contains("slow") || lower.contains("ambient") || lower.contains("sleep") || lower.contains("lofi") -> "Slow & Mellow (~75-90 BPM)"
+                else -> "Balanced Groove (~105-125 BPM)"
+            }
+
+            val themes = mutableListOf<String>()
+            if (lower.contains("bass")) themes.add("Heavy Low-End")
+            if (lower.contains("acoustic") || lower.contains("guitar")) themes.add("Organic Strings")
+            if (lower.contains("synth") || lower.contains("cyber")) themes.add("Analog Synths")
+            if (lower.contains("lofi")) themes.add("Vintage Vinyl Texture")
+            if (lower.contains("vocal") || lower.contains("singing")) themes.add("Lead Vocals")
+            if (themes.isEmpty()) themes.addAll(listOf("Curated Vibe", "Dynamic Flow", "Smart Transitions"))
+
+            val queries = mutableListOf(cleanPrompt)
+            if (!lower.endsWith("songs") && !lower.endsWith("music") && !lower.endsWith("playlist")) {
+                queries.add("$cleanPrompt songs")
+            }
+            if (detectedMood.contains("Gym")) queries.add("workout hype motivation hits")
+            if (detectedMood.contains("Mellow")) queries.add("chill aesthetic songs")
+            if (detectedMood.contains("Drive")) queries.add("synthwave night drive playlist")
+            if (detectedMood.contains("Flow")) queries.add("deep focus lofi study beats")
+
+            val taste = runCatching { FirestoreManager.getUserTasteProfile() }.getOrNull()
+            val candidateSongs = mutableListOf<Song>()
+            val seenVideoIds = mutableSetOf<String>()
+
+            for (q in queries.distinct()) {
+                val results = YtMusicRepository.search(q, SearchFilter.SONGS).getOrNull().orEmpty()
+                for (r in results) {
+                    val s = r.toSongOrNull() ?: continue
+                    if (seenVideoIds.add(s.videoId)) {
+                        candidateSongs.add(s)
+                    }
+                }
+                if (candidateSongs.size >= maxCount * 2) break
+            }
+
+            val finalSongs = if (taste != null && (taste.skippedSongs.isNotEmpty() || taste.skippedArtists.isNotEmpty())) {
+                candidateSongs.filterNot { s ->
+                    taste.skippedSongs.contains(s.videoId) || taste.skippedArtists.contains(s.artist)
+                }
+            } else {
+                candidateSongs
+            }
+
+            val curated = if (finalSongs.size >= maxCount) {
+                finalSongs.take(maxCount)
+            } else if (finalSongs.isNotEmpty()) {
+                finalSongs
+            } else {
+                candidateSongs.take(maxCount)
+            }
+
+            PromptVibeResult(
+                prompt = cleanPrompt,
+                detectedMood = detectedMood,
+                detectedTempo = detectedTempo,
+                keyThemes = themes,
+                songs = curated,
+            )
+        }
+    }
+
     internal fun SearchResult.toSongOrNull(): Song? = when (this) {
         is SearchResult.Track -> this.song
         is SearchResult.TopTrack -> this.song

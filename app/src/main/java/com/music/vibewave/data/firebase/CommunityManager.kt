@@ -58,6 +58,7 @@ object CommunityManager {
 
     data class PrivateMessage(
         val id: String = UUID.randomUUID().toString(),
+        val conversationId: String = "",
         val senderId: String = "",
         val senderName: String = "",
         val senderEmail: String = "",
@@ -70,6 +71,7 @@ object CommunityManager {
     ) {
         fun toMap(): Map<String, Any?> = mapOf(
             "id" to id,
+            "conversationId" to (conversationId.ifBlank { computeConversationId(senderId, receiverId) }),
             "senderId" to senderId,
             "senderName" to senderName,
             "senderEmail" to senderEmail,
@@ -80,6 +82,12 @@ object CommunityManager {
             "timestamp" to timestamp,
             "read" to read,
         )
+
+        companion object {
+            fun computeConversationId(userA: String, userB: String): String {
+                return if (userA < userB) "${userA}_$userB" else "${userB}_$userA"
+            }
+        }
     }
 
     private val _posts = MutableStateFlow<List<CommunityPost>>(emptyList())
@@ -207,9 +215,10 @@ object CommunityManager {
         conversationListener?.remove()
         val myUid = FirestoreManager.currentUser.value?.uid ?: return
         val db = FirestoreManager.getFirestoreOrNull() ?: return
+        val convId = PrivateMessage.computeConversationId(myUid, otherUserId)
 
         conversationListener = db.collection(MESSAGES_COLLECTION)
-            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .whereEqualTo("conversationId", convId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.w(TAG, "Listen conversation failed", error)
@@ -218,21 +227,20 @@ object CommunityManager {
                 val messages = snapshot?.documents?.mapNotNull { doc ->
                     val sId = doc.getString("senderId") ?: ""
                     val rId = doc.getString("receiverId") ?: ""
-                    if ((sId == myUid && rId == otherUserId) || (sId == otherUserId && rId == myUid)) {
-                        PrivateMessage(
-                            id = doc.getString("id") ?: doc.id,
-                            senderId = sId,
-                            senderName = doc.getString("senderName") ?: "",
-                            senderEmail = doc.getString("senderEmail") ?: "",
-                            receiverId = rId,
-                            receiverName = doc.getString("receiverName") ?: "",
-                            receiverEmail = doc.getString("receiverEmail") ?: "",
-                            message = doc.getString("message") ?: "",
-                            timestamp = doc.getLong("timestamp") ?: 0L,
-                            read = doc.getBoolean("read") ?: false,
-                        )
-                    } else null
-                } ?: emptyList()
+                    PrivateMessage(
+                        id = doc.getString("id") ?: doc.id,
+                        conversationId = doc.getString("conversationId") ?: convId,
+                        senderId = sId,
+                        senderName = doc.getString("senderName") ?: "",
+                        senderEmail = doc.getString("senderEmail") ?: "",
+                        receiverId = rId,
+                        receiverName = doc.getString("receiverName") ?: "",
+                        receiverEmail = doc.getString("receiverEmail") ?: "",
+                        message = doc.getString("message") ?: "",
+                        timestamp = doc.getLong("timestamp") ?: 0L,
+                        read = doc.getBoolean("read") ?: false,
+                    )
+                }?.sortedBy { it.timestamp } ?: emptyList()
                 _currentConversation.value = messages
             }
     }
@@ -250,8 +258,10 @@ object CommunityManager {
         scope.launch {
             try {
                 val db = FirestoreManager.getFirestoreOrNull() ?: return@launch
+                val convId = PrivateMessage.computeConversationId(myUid, receiverId)
                 val msg = PrivateMessage(
                     id = UUID.randomUUID().toString(),
+                    conversationId = convId,
                     senderId = myUid,
                     senderName = myUser.name.takeIf { it.isNotBlank() } ?: "VibeWave User",
                     senderEmail = myUser.email,

@@ -58,6 +58,7 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material.icons.rounded.Upgrade
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -298,18 +299,18 @@ class MainActivity : AppCompatActivity() {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     VibeWaveApp(darkTheme = darkTheme, windowWidth = maxWidth, appBackdrop = appBackdrop)
 
-                    // 5.5-second animated Splash Screen on app launch
+                    // Animated Splash Screen on app launch (tap to skip or auto-dismiss)
                     var showSplash by remember { mutableStateOf(true) }
                     LaunchedEffect(Unit) {
-                        delay(5500L)
+                        delay(1200L)
                         showSplash = false
                     }
                     androidx.compose.animation.AnimatedVisibility(
                         visible = showSplash,
                         enter = fadeIn(),
-                        exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(500)),
+                        exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(400)),
                     ) {
-                        SplashScreen()
+                        SplashScreen(onDismiss = { showSplash = false })
                     }
                 }
                 }
@@ -382,9 +383,15 @@ private fun VibeWaveApp(
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     // VibeWave Features State
+    val hasSkippedOnboarding = remember {
+        context.getSharedPreferences("vibewave_user_prefs", android.content.Context.MODE_PRIVATE)
+            .getBoolean("onboarding_skipped", false)
+    }
     val isUserRegistered by com.music.vibewave.data.firebase.FirestoreManager.isRegistered.collectAsStateWithLifecycle()
-    var showOnboardingDialog by remember { mutableStateOf(!isUserRegistered) }
+    var showOnboardingDialog by remember { mutableStateOf(!isUserRegistered && !hasSkippedOnboarding) }
     var showAiPicker by remember { mutableStateOf(false) }
+    var showAiPromptStudio by remember { mutableStateOf(false) }
+    var showEqualizerSheet by remember { mutableStateOf(false) }
     var showAdminDashboard by remember { mutableStateOf(false) }
     var showAboutDeveloper by remember { mutableStateOf(false) }
 
@@ -2111,6 +2118,7 @@ private fun VibeWaveApp(
                             loadingMore = homeLoadingMore,
                             recentlyPlayedLoading = homeRecentlyPlayedLoading,
                             onAiPickerClick = { showAiPicker = true },
+                            onAiPromptStudioClick = { showAiPromptStudio = true },
                         )
                         TAB_EXPLORE -> selectedMoodGenre?.let { category ->
                             MoodGenrePlaylistsScreen(
@@ -3214,6 +3222,20 @@ private fun VibeWaveApp(
                 onPlaySong = { song -> play(listOf(song), 0) },
                 onPlayRadio = { song -> playRadio(song) },
                 onPlayQueue = { queue -> play(queue, 0) },
+            )
+        }
+
+        if (showAiPromptStudio) {
+            com.music.vibewave.ui.screens.AiPromptStudioSheet(
+                onDismissRequest = { showAiPromptStudio = false },
+                onPlayPlaylist = { songs -> play(songs, 0) },
+                onPlayQueue = { queue -> play(queue, 0) },
+            )
+        }
+
+        if (showEqualizerSheet) {
+            com.music.vibewave.ui.screens.EqualizerSheet(
+                onDismissRequest = { showEqualizerSheet = false },
             )
         }
 

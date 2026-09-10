@@ -120,18 +120,18 @@ class NotificationSyncWorker(
                         ?: prefs.getString(KEY_CACHED_UID, null)
 
                     if (!myUid.isNullOrBlank()) {
-                        // Simple query — only filter by receiverId to avoid composite index requirement
+                        // Query filtered by receiverId without composite index requirement, sorted in memory
                         val messagesSnapshot = db.collection("private_messages")
                             .whereEqualTo("receiverId", myUid)
-                            .orderBy("timestamp", Query.Direction.DESCENDING)
-                            .limit(10)
+                            .limit(20)
                             .get()
                             .await()
 
                         var newestMsgTime = lastSeenPrivateMsgTime
                         var shownCount = 0
 
-                        for (doc in messagesSnapshot.documents) {
+                        val sortedDocs = messagesSnapshot.documents.sortedByDescending { it.getLong("timestamp") ?: 0L }
+                        for (doc in sortedDocs) {
                             val ts = doc.getLong("timestamp") ?: now
                             // Only show messages newer than the last seen timestamp
                             if (ts <= lastSeenPrivateMsgTime) continue

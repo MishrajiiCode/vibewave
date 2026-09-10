@@ -107,6 +107,7 @@ fun HomeScreen(
     loadingMore: Boolean = false,
     recentlyPlayedLoading: Boolean = false,
     onAiPickerClick: (() -> Unit)? = null,
+    onAiPromptStudioClick: (() -> Unit)? = null,
 ) {
     PullToRefresh(
         refreshing = refreshing,
@@ -131,6 +132,7 @@ fun HomeScreen(
                 item {
                     com.music.vibewave.ui.components.AiBannerCard(
                         onClick = onAiPickerClick,
+                        onPromptStudioClick = onAiPromptStudioClick,
                         modifier = Modifier.padding(bottom = 6.dp),
                     )
                 }

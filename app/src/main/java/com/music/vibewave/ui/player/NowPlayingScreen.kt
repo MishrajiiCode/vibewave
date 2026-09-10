@@ -138,6 +138,8 @@ import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -607,6 +609,9 @@ fun NowPlayingScreen(
 
     val syncedLyricsEnabled by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
     val hideVolumeBar by AppSettings.hideVolumeBar.collectAsStateWithLifecycle()
+    val isEqActive by com.music.vibewave.playback.AudioEqualizer.isEnabled.collectAsStateWithLifecycle()
+    var showEqualizerSheet by remember { mutableStateOf(false) }
+    var showVisualizer by remember { mutableStateOf(false) }
 
     // Animated cover art: the looping video some labels publish alongside a
     // release, laid over the sleeve. A miss is the normal answer — see
@@ -2161,6 +2166,15 @@ fun NowPlayingScreen(
                 )
             }
 
+            if (showVisualizer) {
+                com.music.vibewave.ui.components.NeonAudioVisualizer(
+                    isPlaying = isPlaying,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                )
+            }
+
             if (lyricsOpen) {
                 Spacer(Modifier.height(16.dp))
                 // Full-width header row: optional logs icon on the far left,
@@ -2394,6 +2408,20 @@ fun NowPlayingScreen(
                     },
                 )
                 BottomGlyph(
+                    icon = Icons.Rounded.Tune,
+                    contentDescription = "Studio Equalizer & FX",
+                    onClick = { showEqualizerSheet = true },
+                    highlighted = isEqActive,
+                    haptic = Haptic.Tap,
+                )
+                BottomGlyph(
+                    icon = Icons.Rounded.GraphicEq,
+                    contentDescription = "Neon Audio Visualizer",
+                    onClick = { showVisualizer = !showVisualizer },
+                    highlighted = showVisualizer,
+                    haptic = Haptic.Select,
+                )
+                BottomGlyph(
                     icon = VibeWaveIcons.Infinity,
                     contentDescription = stringResource(
                         if (autoplayEnabled) R.string.autoplay_on else R.string.autoplay_off,
@@ -2420,6 +2448,12 @@ fun NowPlayingScreen(
             }
             }
         }
+    }
+
+    if (showEqualizerSheet) {
+        com.music.vibewave.ui.screens.EqualizerSheet(
+            onDismissRequest = { showEqualizerSheet = false },
+        )
     }
 }
 

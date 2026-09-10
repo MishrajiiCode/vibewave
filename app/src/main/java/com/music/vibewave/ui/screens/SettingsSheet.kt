@@ -276,6 +276,7 @@ fun SettingsScreen(
     var confirmImport by remember { mutableStateOf(false) }
     var showPerformanceWarning by remember { mutableStateOf(false) }
     var showPerformanceConfirmation by remember { mutableStateOf(false) }
+    var showEqualizerSheet by remember { mutableStateOf(false) }
     val backupScope = rememberCoroutineScope()
 
     val batterySettingsLauncher = rememberLauncherForActivityResult(
@@ -695,8 +696,8 @@ fun SettingsScreen(
                 SettingsRow(
                     icon = Icons.Rounded.Tune,
                     title = stringResource(R.string.equalizer),
-                    subtitle = stringResource(R.string.equalizer_subtitle),
-                    onClick = { openEqualizer(context, sessionId) },
+                    subtitle = "10-Band Studio EQ, Bass Punch & 3D Spatializer",
+                    onClick = { showEqualizerSheet = true },
                 )
             }
         }
@@ -1516,6 +1517,9 @@ fun SettingsScreen(
         )
     }
 
+    if (showEqualizerSheet) {
+        EqualizerSheet(onDismissRequest = { showEqualizerSheet = false })
+    }
 }
 
 /** "3 months of listening" — the unit a backup is actually measured in. */

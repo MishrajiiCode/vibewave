@@ -91,6 +91,14 @@ object ActivityTracker {
         )
     }
 
+    fun onAiPromptGenerate(prompt: String) {
+        FirestoreManager.logActivity(
+            activityType = "AI_PROMPT_STUDIO",
+            title = "Prompt: \"$prompt\"",
+            details = "Synthesized flow for: $prompt",
+        )
+    }
+
     fun onPlaylistCreate(title: String) {
         FirestoreManager.logActivity(
             activityType = "PLAYLIST_CREATE",
