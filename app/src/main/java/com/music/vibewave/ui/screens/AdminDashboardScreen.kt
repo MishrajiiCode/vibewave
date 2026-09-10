@@ -1210,8 +1210,8 @@ fun AdminDashboardScreen(
                             Triple("Nostalgic Love 🍂", "🍂 Nostalgic Love Chords", "Relive your sweetest memories with timeless golden melodies that never fade 💖") to ("ROMANTIC" to "ROMANTIC_VIBES"),
 
                             // Updates
-                            Triple("v1.5.7 Ready 🚀", "🚀 Fresh VibeWave v1.5.7 Ready!", "Community chat, 5.5s splash, Advanced AI Studio & Cosmic UI now live! Tap to install immediately. ⚡") to ("UPDATES" to "APP_UPDATE"),
-                            Triple("Performance Boost ⚡", "⚡ Performance & Stability Update v1.5.7", "Resolved community visibility, added 1-on-1 private messaging, and enhanced AI engine. Tap to update!") to ("UPDATES" to "APP_UPDATE"),
+                            Triple("v1.6.0 Studio EQ & AI 🎛️", "🎛️ VibeWave v1.6.0 is Live!", "10-Band Studio Equalizer, Dynamic Bass Punch, AI Natural Language Prompt Studio & Neon Visualizer now ready! Tap to update 🚀") to ("UPDATES" to "APP_UPDATE"),
+                            Triple("v1.5.9 Update 🚀", "🚀 VibeWave v1.5.9 Available", "Closed-app background push notifications, direct messages, and refined AI engine. Tap to update!") to ("UPDATES" to "APP_UPDATE"),
 
                             // Motivation & Chill
                             Triple("Morning Surge ⚡", "⚡ Good Morning! Energy Surge", "Kick off your day with unstoppable momentum and high-vibe tunes! ☀️🚀") to ("MOTIVATION" to "MOTIVATION"),
@@ -1325,7 +1325,7 @@ fun AdminDashboardScreen(
                                                         announcementType = type
                                                         if (type == "APP_UPDATE") {
                                                             onlyNonUpdatedAudience = true
-                                                            targetVersionForBroadcast = "1.5.5"
+                                                            targetVersionForBroadcast = com.music.vibewave.BuildConfig.VERSION_NAME
                                                         } else {
                                                             onlyNonUpdatedAudience = false
                                                         }
