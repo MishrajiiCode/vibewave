@@ -248,9 +248,11 @@ object AudioEqualizer {
             val gainFactor = normalizedGains[sampleIdx]
 
             val targetLevel = if (gainFactor >= 0) {
-                (gainFactor * band.maxLevelMilliBels).toInt().toShort()
+                (gainFactor * band.maxLevelMilliBels).toInt()
+                    .coerceIn(band.minLevelMilliBels.toInt(), band.maxLevelMilliBels.toInt()).toShort()
             } else {
-                (-gainFactor * band.minLevelMilliBels).toInt().toShort()
+                (gainFactor.coerceAtLeast(-1.0f) * -band.minLevelMilliBels).toInt()
+                    .coerceIn(band.minLevelMilliBels.toInt(), band.maxLevelMilliBels.toInt()).toShort()
             }
 
             runCatching { equalizer?.setBandLevel(band.index, targetLevel) }
@@ -259,14 +261,39 @@ object AudioEqualizer {
         }
         _bands.value = updatedBands
 
-        if (presetName == "Deep Bass") {
-            setBassBoost(650)
-        } else if (presetName == "Club EDM") {
-            setBassBoost(500)
-            setVirtualizer(300)
-        } else if (presetName == "Flat") {
-            setBassBoost(0)
-            setVirtualizer(0)
+        when (presetName) {
+            "Deep Bass" -> {
+                setBassBoost(650)
+                setVirtualizer(100)
+            }
+            "Club EDM" -> {
+                setBassBoost(500)
+                setVirtualizer(300)
+            }
+            "Bass & Treble" -> {
+                setBassBoost(400)
+                setVirtualizer(200)
+            }
+            "Rock" -> {
+                setBassBoost(250)
+                setVirtualizer(150)
+            }
+            "Pop / Vocal" -> {
+                setBassBoost(150)
+                setVirtualizer(150)
+            }
+            "Acoustic" -> {
+                setBassBoost(100)
+                setVirtualizer(100)
+            }
+            "Classical" -> {
+                setBassBoost(0)
+                setVirtualizer(250)
+            }
+            else -> { // "Flat"
+                setBassBoost(0)
+                setVirtualizer(0)
+            }
         }
     }
 

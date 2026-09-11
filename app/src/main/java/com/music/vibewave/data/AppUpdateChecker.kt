@@ -103,12 +103,11 @@ object AppUpdateChecker {
             return """
                 ### 🚀 What's New in VibeWave v$version
 
-                - 💬 **Live Community & WhatsApp-Style 1-on-1 Chat**: Post reviews, rate tracks, join global discussions, and message other users in private real-time chat.
-                - ⏱️ **5.5-Second Enhanced Splash Screen**: 7-bar harmonic audio equalizer, smooth loading progress bar, and 4-stage system initialization status readout.
-                - 🧠 **Advanced AI Neural Studio**: 13 curated acoustic modes, circadian rhythm harmony alignment, and real-time acoustic metrics breakdown (BPM, danceability, warmth).
-                - 🌌 **Cosmic Mesh AI Interface**: Deep multi-stop gradient ambient canvas with glassmorphic cards replacing the plain dark theme.
-                - 👑 **Architect Showcase & About Section**: Celebrating Raj Mishra's vision, with deep breakdowns of the Bit-Perfect Lossless Audio Pipeline and zero-API local AI engine.
-                - ⚡ **Direct Seamless Installation**: Instant one-tap update download and automatic package installer launch.
+                - 🎧 **Enhanced Sound Quality & Acoustic Fidelity**: Tuned high-resolution audio rendering, enhanced dynamic headroom, expanded harmonic clarity, and optimized bit-perfect streaming pipeline.
+                - 🎛️ **Studio Equalizer Preset Calibration**: Fixed preset state transitions so Bass Boost and Virtualizer levels reset cleanly across all equalizer presets without state leakage.
+                - 🐛 **Playback & Background Bug Fixes**: Resolved audio buffer synchronization hiccups during fast track skips, enhanced session recovery, and fixed background playback pause edge-cases.
+                - ⚡ **Performance & Latency Enhancements**: Streamlined audio frame processing, reduced UI-to-audio latency, and stabilized memory consumption for extended listening sessions.
+                - 🧠 **AI Prompt Studio & Recommendation Polish**: Sharpened natural language prompt parsing and acoustic mode clustering for lightning-fast playlist curation.
             """.trimIndent()
         }
         return rawNotes ?: ""

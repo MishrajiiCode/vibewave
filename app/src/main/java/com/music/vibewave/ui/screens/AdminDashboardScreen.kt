@@ -1210,6 +1210,7 @@ fun AdminDashboardScreen(
                             Triple("Nostalgic Love 🍂", "🍂 Nostalgic Love Chords", "Relive your sweetest memories with timeless golden melodies that never fade 💖") to ("ROMANTIC" to "ROMANTIC_VIBES"),
 
                             // Updates
+                            Triple("v1.6.1 Audio Polish & Fixes 🎧", "🎧 VibeWave v1.6.1 is Live!", "Enhanced sound quality, studio equalizer preset calibration, critical playback bug fixes & ultra-low latency audio processing! Tap to update 🚀") to ("UPDATES" to "APP_UPDATE"),
                             Triple("v1.6.0 Studio EQ & AI 🎛️", "🎛️ VibeWave v1.6.0 is Live!", "10-Band Studio Equalizer, Dynamic Bass Punch, AI Natural Language Prompt Studio & Neon Visualizer now ready! Tap to update 🚀") to ("UPDATES" to "APP_UPDATE"),
                             Triple("v1.5.9 Update 🚀", "🚀 VibeWave v1.5.9 Available", "Closed-app background push notifications, direct messages, and refined AI engine. Tap to update!") to ("UPDATES" to "APP_UPDATE"),
 
