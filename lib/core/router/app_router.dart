@@ -12,6 +12,8 @@ import 'package:vibewave/presentation/screens/categories/categories_screen.dart'
 import 'package:vibewave/presentation/screens/admin/admin_login_screen.dart';
 import 'package:vibewave/presentation/screens/admin/admin_dashboard_screen.dart';
 import 'package:vibewave/presentation/screens/admin/add_song_screen.dart';
+import 'package:vibewave/presentation/screens/settings/settings_screen.dart';
+import 'package:vibewave/presentation/screens/listen_together/listen_together_screen.dart';
 import 'package:vibewave/presentation/widgets/main_scaffold.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -45,6 +47,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/categories',
             builder: (context, state) => const CategoriesScreen(),
           ),
+          // Listen Together inside the shell so nav bar stays visible
+          GoRoute(
+            path: '/listen-together',
+            builder: (context, state) => const ListenTogetherScreen(),
+          ),
         ],
       ),
       GoRoute(
@@ -64,6 +71,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             );
           },
         ),
+      ),
+      // Settings (full screen push, no nav bar)
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      // Listen Together deep-link with room ID
+      GoRoute(
+        path: '/listen-together/:roomId',
+        builder: (context, state) {
+          final roomId = state.pathParameters['roomId'];
+          return ListenTogetherScreen(initialRoomId: roomId);
+        },
       ),
       GoRoute(
         path: '/admin/login',

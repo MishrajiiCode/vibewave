@@ -1,7 +1,7 @@
 name: vibewave
-description: "VibeWave - Premium Music Streaming App with YouTube Integration, Firebase & AI Recommendations"
+description: "VibeWave 2.0 - Premium Music Streaming App with YouTube Integration, Firebase, AI Recommendations, Listen Together & Equalizer"
 publish_to: "none"
-version: 1.0.0+1
+version: 2.0.0+2
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -51,10 +51,20 @@ dependencies:
   uuid: ^4.4.2
   rxdart: ^0.28.0
 
+  # v2.0 additions
+  # Local storage for history
+  hive_flutter: ^1.1.0
+  # App version info
+  package_info_plus: ^8.0.2
+  # Sleep timer (keep screen on)
+  wakelock_plus: ^1.2.8
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.9
 
 flutter:
   uses-material-design: true

@@ -8,6 +8,7 @@ class AppStrings {
   static const String search = 'Search';
   static const String library = 'Library';
   static const String discover = 'Discover';
+  static const String together = 'Together';
 
   // Home
   static const String featuredPlaylists = 'Featured Playlists';
@@ -43,6 +44,33 @@ class AppStrings {
   static const String basedOnHistory = 'Based on your listening history';
   static const String generatingRecommendations = 'Generating recommendations...';
 
+  // Listen Together (v2.0)
+  static const String listenTogether = 'Listen Together';
+  static const String listenTogetherDesc = 'Listen to music in real-time with friends';
+  static const String createRoom = 'Create a Room';
+  static const String joinRoom = 'Join a Room';
+  static const String roomCode = 'Room Code';
+  static const String roomCodeHint = 'Enter 6-character code';
+  static const String shareRoomCode = 'Share Code';
+  static const String leaveRoom = 'Leave Room';
+  static const String youAreHost = 'You are the host';
+  static const String syncAll = 'Sync All';
+  static const String chatMessage = 'Send a message...';
+  static const String noMessages = 'No messages yet';
+
+  // Settings (v2.0)
+  static const String settings = 'Settings';
+  static const String audioQuality = 'AUDIO QUALITY';
+  static const String playback = 'PLAYBACK';
+  static const String sleepTimer = 'SLEEP TIMER';
+  static const String about = 'ABOUT';
+  static const String crossfade = 'Crossfade';
+  static const String skipSilence = 'Skip Silence';
+  static const String skipSilenceDesc = 'Automatically skip near-silent sections';
+  static const String playbackSpeed = 'Playback Speed';
+  static const String off = 'Off';
+  static const String equalizer = 'Equalizer';
+
   // Admin
   static const String adminPanel = 'Admin Panel';
   static const String addSong = 'Add Song';
@@ -63,7 +91,8 @@ class AppStrings {
   static const String cancel = 'Cancel';
   static const String delete = 'Delete';
   static const String confirmDelete = 'Confirm Delete';
-  static const String areYouSureDelete = 'Are you sure you want to delete this song?';
+  static const String areYouSureDelete =
+      'Are you sure you want to delete this song?';
   static const String songSaved = 'Song saved successfully!';
   static const String songDeleted = 'Song deleted successfully!';
   static const String errorSaving = 'Error saving song. Please try again.';
@@ -105,13 +134,13 @@ class AppStrings {
 
   // Moods
   static const List<String> moods = [
-    'Happy ??',
-    'Sad ??',
-    'Energetic ?',
-    'Chill ??',
-    'Romantic ??',
-    'Focused ??',
-    'Party ??',
-    'Workout ??',
+    'Happy 😊',
+    'Sad 😢',
+    'Energetic ⚡',
+    'Chill 🌊',
+    'Romantic 💕',
+    'Focused 🎯',
+    'Party 🎉',
+    'Workout 💪',
   ];
 }

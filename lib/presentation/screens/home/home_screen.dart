@@ -61,7 +61,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final newReleases = ref.watch(newReleasesProvider);
     final isAdmin = ref.watch(isAdminProvider);
     final hour = DateTime.now().hour;
-    final greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+    final greeting =
+        hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -87,7 +88,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       colors: [AppColors.primary, AppColors.secondary],
                     ),
                   ),
-                  child: const Icon(Icons.waves_rounded, color: Colors.white, size: 20),
+                  child: const Icon(Icons.waves_rounded,
+                      color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 10),
                 const Text(
@@ -108,6 +110,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       color: AppColors.primary),
                   onPressed: () => context.go('/admin/dashboard'),
                 ),
+              // Settings shortcut
+              IconButton(
+                icon: const Icon(Icons.settings_outlined,
+                    color: AppColors.textSecondary),
+                onPressed: () => context.push('/settings'),
+              ),
               IconButton(
                 icon: Container(
                   width: 36,
@@ -153,6 +161,68 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2, end: 0),
 
+          // ── Listen Together Banner ────────────────────────────────────
+          SliverToBoxAdapter(
+            child: GestureDetector(
+              onTap: () => context.push('/listen-together'),
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.3),
+                      AppColors.secondary.withOpacity(0.15),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: AppColors.primary.withOpacity(0.3), width: 1),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.people_alt_rounded,
+                          color: AppColors.primary, size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            AppStrings.listenTogether,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            AppStrings.listenTogetherDesc,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded,
+                        color: AppColors.primary, size: 16),
+                  ],
+                ),
+              ),
+            ),
+          ).animate().fadeIn(delay: 100.ms, duration: 400.ms),
+
           // Categories chips
           SliverToBoxAdapter(
             child: SizedBox(
@@ -160,18 +230,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: categories.when(
                 data: (cats) => ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
                   itemCount: cats.length,
                   itemBuilder: (context, i) {
                     final cat = cats[i];
                     return GestureDetector(
                       onTap: () {
-                        ref.read(selectedCategoryProvider.notifier).state = cat.name;
+                        ref
+                            .read(selectedCategoryProvider.notifier)
+                            .state = cat.name;
                         context.go('/categories');
                       },
                       child: Container(
                         margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 6),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
@@ -181,7 +255,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                              color: cat.displayColor.withOpacity(0.5), width: 1),
+                              color: cat.displayColor.withOpacity(0.5),
+                              width: 1),
                         ),
                         child: Text(
                           cat.name,
@@ -195,7 +270,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     );
                   },
                 ),
-                loading: () => _shimmerRow(height: 34, count: 5, width: 80),
+                loading: () =>
+                    _shimmerRow(height: 34, count: 5, width: 80),
                 error: (_, __) => const SizedBox(),
               ),
             ),
@@ -224,7 +300,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       height: 200,
                       child: PageView.builder(
                         controller: _pageController,
-                        onPageChanged: (i) => setState(() => _featuredIndex = i),
+                        onPageChanged: (i) =>
+                            setState(() => _featuredIndex = i),
                         itemCount: songs.length,
                         itemBuilder: (context, i) {
                           final song = songs[i];
@@ -236,7 +313,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               context.push('/player');
                             },
                             child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 6),
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 6),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(20),
                                 child: Stack(
@@ -248,7 +326,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       placeholder: (_, __) => Container(
                                           color: AppColors.surfaceVariant),
                                       errorWidget: (_, __, ___) =>
-                                          Container(color: AppColors.surfaceVariant),
+                                          Container(
+                                              color:
+                                                  AppColors.surfaceVariant),
                                     ),
                                     Container(
                                       decoration: BoxDecoration(
@@ -267,7 +347,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       left: 16,
                                       right: 60,
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             song.title,
@@ -299,8 +380,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                           color: AppColors.primary,
                                           shape: BoxShape.circle,
                                         ),
-                                        child: const Icon(Icons.play_arrow_rounded,
-                                            color: Colors.white, size: 26),
+                                        child: const Icon(
+                                            Icons.play_arrow_rounded,
+                                            color: Colors.white,
+                                            size: 26),
                                       ),
                                     ),
                                   ],
@@ -317,7 +400,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     highlightColor: AppColors.card,
                     child: Container(
                       height: 200,
-                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      margin:
+                          const EdgeInsets.symmetric(horizontal: 20),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceVariant,
                         borderRadius: BorderRadius.circular(20),
@@ -328,29 +412,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 // Page dots
                 featured.whenOrNull(
-                  data: (songs) => songs.length > 1
-                      ? Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(songs.length, (i) {
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                margin: const EdgeInsets.symmetric(horizontal: 3),
-                                width: i == _featuredIndex ? 20 : 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: i == _featuredIndex
-                                      ? AppColors.primary
-                                      : AppColors.textTertiary,
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                              );
-                            }),
-                          ),
-                        )
-                      : null,
-                ) ?? const SizedBox(),
+                      data: (songs) => songs.length > 1
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children:
+                                    List.generate(songs.length, (i) {
+                                  return AnimatedContainer(
+                                    duration:
+                                        const Duration(milliseconds: 300),
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 3),
+                                    width: i == _featuredIndex ? 20 : 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: i == _featuredIndex
+                                          ? AppColors.primary
+                                          : AppColors.textTertiary,
+                                      borderRadius:
+                                          BorderRadius.circular(3),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            )
+                          : null,
+                    ) ??
+                    const SizedBox(),
               ],
             ),
           ),
@@ -366,7 +455,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 height: 180,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: songs.take(10).length,
                   itemBuilder: (context, i) => Padding(
                     padding: const EdgeInsets.only(right: 12),
@@ -375,7 +465,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
-              loading: () => _shimmerRow(height: 180, count: 4, width: 130),
+              loading: () =>
+                  _shimmerRow(height: 180, count: 4, width: 130),
               error: (_, __) => const SizedBox(),
             ),
           ),
@@ -422,7 +513,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _shimmerRow({required double height, required int count, required double width}) {
+  Widget _shimmerRow(
+      {required double height, required int count, required double width}) {
     return SizedBox(
       height: height,
       child: Shimmer.fromColors(
@@ -481,6 +573,3 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
-
-
-

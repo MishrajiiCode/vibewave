@@ -16,6 +16,7 @@ class MainScaffold extends ConsumerWidget {
     if (location.startsWith('/search')) return 1;
     if (location.startsWith('/discover')) return 2;
     if (location.startsWith('/library')) return 3;
+    if (location.startsWith('/listen-together')) return 4;
     return 0;
   }
 
@@ -78,6 +79,12 @@ class MainScaffold extends ConsumerWidget {
                           isSelected: currentIndex == 3,
                           onTap: () => context.go('/library'),
                         ),
+                        _NavItem(
+                          icon: Icons.people_rounded,
+                          label: 'Together',
+                          isSelected: currentIndex == 4,
+                          onTap: () => context.go('/listen-together'),
+                        ),
                       ],
                     ),
                   ),
@@ -111,10 +118,12 @@ class _NavItem extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.15)
+              : Colors.transparent,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -129,8 +138,9 @@ class _NavItem extends StatelessWidget {
               label,
               style: TextStyle(
                 color: isSelected ? AppColors.primary : AppColors.textTertiary,
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                fontSize: 10,
+                fontWeight:
+                    isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ],
