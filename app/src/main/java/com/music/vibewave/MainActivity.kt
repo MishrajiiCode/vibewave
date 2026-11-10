@@ -707,15 +707,19 @@ private fun VibeWaveApp(
     // Listen Together Sync Bridge
     val ltRoom by ListenTogetherManager.room.collectAsStateWithLifecycle()
     val ltIsHost by ListenTogetherManager.isHost.collectAsStateWithLifecycle()
+    val canControlPlayback = ltIsHost || (ltRoom?.inRoom == true && !(ltRoom?.hostOnlyControl ?: true))
 
-    // Host broadcast to Firestore on playback changes
-    LaunchedEffect(player.song?.videoId, player.isPlaying, ltIsHost, ltRoom?.roomId) {
-        if (ltIsHost && ltRoom?.inRoom == true) {
-            ListenTogetherManager.syncPlaybackState(
-                song = player.song,
-                isPlaying = player.isPlaying,
-                positionMs = controller?.currentPosition ?: 0L,
-            )
+    // Broadcast to Firestore on playback changes (Host or Collaborative DJ Mode)
+    LaunchedEffect(player.song?.videoId, player.isPlaying, canControlPlayback, ltRoom?.roomId) {
+        if (canControlPlayback && ltRoom?.inRoom == true) {
+            val currentRoomSongId = ltRoom?.songId
+            if (ltIsHost || (player.song?.videoId != null && player.song?.videoId != currentRoomSongId)) {
+                ListenTogetherManager.syncPlaybackState(
+                    song = player.song,
+                    isPlaying = player.isPlaying,
+                    positionMs = controller?.currentPosition ?: 0L,
+                )
+            }
         }
     }
 

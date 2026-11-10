@@ -1,44 +1,38 @@
-# 🚀 VibeWave v2.0.2 — New Brand Icon, Real-Time Listen Together & Studio Audio Quality
+# 🚀 VibeWave v2.0.3 — In-Room Live Chat, DJ Access Control & Splash Icon Fix
 
-Welcome to **VibeWave v2.0.2**! This major update brings a stunning **new brand icon**, real-time **Listen Together** room synchronization inspired by SimpMusic, studio-grade audio enhancements, and seamless in-app auto-updating.
-
----
-
-### 🎨 Brand New Custom VibeWave Icon
-- **Acoustic Monogram**: Completely replaces the previous generic Play Store triangle icon with an original acoustic sound-wave monogram centered around a dynamic "V" and expanding cyan & neon violet waves.
-- **Deep Space Gradient Backdrop**: Features a high-contrast deep cosmic gradient (`#0A0A1F` to `#1A0050`) that pops beautifully across Android launchers, adaptive icons, and themed app drawers.
+Welcome to **VibeWave v2.0.3**! This release enhances the **Listen Together** experience with **real-time in-room chat**, **connected members list**, **host DJ permission controls**, and fixes the app launcher splash & in-app logo to feature the new brand icon everywhere.
 
 ---
 
-### 👥 Real-Time "Listen Together" Feature (SimpMusic Engine)
-- **Live Room Synchronization**: Start a room as Host or join friends with a 6-character room code (e.g., `VIBE88`).
-- **Synchronized Playback**: Guests automatically synchronize songs, play/pause state, and track position in real-time with sub-second accuracy.
-- **Direct Top-Bar Access**: Convenient "Together" / "Live Sync" button right in the frosted top bar with a live pulsing indicator when a shared room is active.
-- **Background Playback**: Minimize the sheet or switch apps while the synchronized session keeps playing seamlessly.
+### 💬 Live In-Room Chat
+- **Real-Time Messaging**: Chat live with everyone in your Listen Together room while enjoying synchronized music.
+- **Modern Message Bubbles**: Sender tags, timestamps, auto-scroll, and fluid glass styling.
 
 ---
 
-### 🏠 100% Native High-Performance Experience
-- **Liquid Glass & Cosmic Canvas**: Retains the beloved native Jetpack Compose home screen, dynamic mesh blur, trending carousels, and responsive bottom sheets.
-- **Zero UI Regressions**: Instant startup, 60–120 FPS buttery smooth scrolling, and full access to Library, Explore, and Search.
+### 👑 Host DJ Access & Permission Controls
+- **DJ Lock Mode (Host Only)**: Only the room host can play, pause, seek, and select songs.
+- **Collaborative DJ Mode**: Host can toggle Collaborative Mode with one tap, allowing everyone in the room to pick tracks and manage playback together.
 
 ---
 
-### 🎧 SimpMusic & Echo Music Audio Quality
-- **Lossless Dynamic Headroom**: Bit-perfect audio streaming up to Opus / FLAC quality ceilings.
-- **Calibrated Equalizer**: 10-band precision EQ, bass boost, and widened stereo soundstage for headphones and Bluetooth gear.
+### 👥 Connected Listeners Directory
+- **Live Member List**: See everyone currently in the session with avatar badges:
+  - 👑 **Host / DJ**: Room owner with playback controls.
+  - 🎧 **Joined**: Listeners synced to the music.
+
+---
+
+### 🎨 Complete Brand Icon Unification
+- **App Launch Splash Screen**: Fixed the splash screen shown when launching the app to use the new vector acoustic sound-wave monogram.
+- **In-App Top Bar Logo**: The logo in the frosted top bar and replay summaries now displays the new vector branding instead of the old store triangle.
+- **Notification Logo**: Updated notification icon to match the new acoustic monogram.
 
 ---
 
 ### 📲 1-Tap Seamless In-App Updates
-- **Automatic In-App Update**: When you open VibeWave, `AppUpdateChecker` detects v2.0.2. Tap "Update Now" and the APK downloads and installs in-place automatically without any "App not installed" error.
-- **Signed with Official Production Keystore**: Matches your existing installation's signature for safe, instant updates without losing playlists, downloads, or history.
-
----
-
-### 📦 APK Downloads
-- **Universal Release APK**: Compatible with all supported Android devices (`armeabi-v7a`, `arm64-v8a`, `x86_64`).
-- **ARM64-v8a Release APK**: Ultra-compact optimized build for modern 64-bit Android devices.
+- Open VibeWave to receive the in-app update prompt and install v2.0.3 directly in seconds.
+- Signed with the official production keystore (`vibewave-release.jks`) for smooth in-place installation.
 
 ---
 *Crafted with ❤️ by [Raj Mishra](https://github.com/MishrajiiCode)*

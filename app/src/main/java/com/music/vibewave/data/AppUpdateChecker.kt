@@ -103,11 +103,12 @@ object AppUpdateChecker {
             return """
                 ### 🚀 What's New in VibeWave v$version
 
-                - 🎨 **New Custom Brand Icon**: Redesigned modern acoustic sound-wave monogram with electric cyan & deep neon purple gradients (replaces generic store triangles).
-                - 👥 **Listen Together (SimpMusic Sync)**: Real-time collaborative music rooms! Share your 6-digit room code with friends to synchronize track playback, pause, and seek instantly.
-                - 🏠 **Native High-Performance Experience**: Fluid cosmic mesh gradient canvas, fluid Apple Music styling, carousels, and responsive player controls.
-                - 🎧 **SimpMusic & Echo Music Audio Quality**: Lossless bit-perfect pipeline, wide stereo soundstage, dynamic headroom, and calibrated 10-band equalizer.
-                - 📲 **1-Tap Seamless In-App Updates**: Update in-place directly from inside the app with zero installation errors!
+                - 💬 **Live In-Room Chat**: Chat in real-time with everyone in your Listen Together room!
+                - 👥 **Connected Members List**: View everyone listening with "👑 Host / DJ" and "🎧 Listener" badges.
+                - 🔒 **Host DJ Permission Controls**: Host can lock playback controls or switch to Collaborative Mode so anyone can pick songs!
+                - 🎨 **Unified Brand Icon Across All Screens**: Fixed app launch splash screen and in-app top bar logo to display the new vector soundwave monogram everywhere.
+                - 🎧 **Studio Audio Quality & Equalizer**: 10-band precision EQ, bass boost, and lossless headroom.
+                - 📲 **1-Tap Seamless In-App Updates**: Instant in-place installation without leaving the app!
             """.trimIndent()
         }
         return rawNotes ?: ""

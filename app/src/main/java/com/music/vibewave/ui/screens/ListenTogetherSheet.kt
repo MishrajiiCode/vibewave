@@ -29,6 +29,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,10 +39,15 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.ChatBubble
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -55,12 +63,15 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -86,6 +97,9 @@ import coil3.compose.AsyncImage
 import com.music.vibewave.data.firebase.FirestoreManager
 import com.music.vibewave.data.firebase.ListenTogetherManager
 import com.music.vibewave.data.model.Song
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun ListenTogetherSheet(
@@ -158,7 +172,7 @@ fun ListenTogetherSheet(
                                 color = Color.White,
                             )
                             Text(
-                                text = "Real-time synchronized listening",
+                                text = if (room?.inRoom == true) "Live Room • ${room?.roomId}" else "Synchronized listening",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF8E92BC),
                             )
@@ -177,8 +191,8 @@ fun ListenTogetherSheet(
 
             // Main Content Body
             if (room?.inRoom == true) {
-                // Active Room View
-                ActiveRoomContent(
+                // Active Room with Tabbed Controls: Sync / Chat / Participants
+                ActiveRoomView(
                     room = room!!,
                     isHost = isHost,
                     onLeave = {
@@ -323,6 +337,662 @@ fun ListenTogetherSheet(
                                 }
                             },
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveRoomView(
+    room: ListenTogetherManager.ListenTogetherRoom,
+    isHost: Boolean,
+    onLeave: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var activeTab by remember { mutableIntStateOf(0) } // 0 = Player/Room, 1 = Live Chat, 2 = Members
+    val messages by ListenTogetherManager.messages.collectAsStateWithLifecycle()
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // In-Room Navigation Tabs
+        TabRow(
+            selectedTabIndex = activeTab,
+            containerColor = Color(0xFF131522),
+            contentColor = Color.White,
+            indicator = { tabPositions ->
+                TabRowDefaults.SecondaryIndicator(
+                    Modifier.tabIndicatorOffset(tabPositions[activeTab]),
+                    color = Color(0xFF00D9FF),
+                )
+            },
+        ) {
+            Tab(
+                selected = activeTab == 0,
+                onClick = { activeTab = 0 },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Headphones, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Session", fontSize = 13.sp)
+                    }
+                },
+            )
+            Tab(
+                selected = activeTab == 1,
+                onClick = { activeTab = 1 },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.ChatBubble, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (messages.isNotEmpty()) "Chat (${messages.size})" else "Chat",
+                            fontSize = 13.sp,
+                        )
+                    }
+                },
+            )
+            Tab(
+                selected = activeTab == 2,
+                onClick = { activeTab = 2 },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Group, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("People (${room.participantCount})", fontSize = 13.sp)
+                    }
+                },
+            )
+        }
+
+        when (activeTab) {
+            0 -> RoomPlayerSection(
+                room = room,
+                isHost = isHost,
+                onLeave = onLeave,
+                onDismiss = onDismiss,
+            )
+            1 -> RoomChatSection(
+                roomId = room.roomId,
+                messages = messages,
+                myUid = ListenTogetherManager.getMyUserId(),
+            )
+            2 -> RoomMembersSection(
+                room = room,
+                myUid = ListenTogetherManager.getMyUserId(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun RoomPlayerSection(
+    room: ListenTogetherManager.ListenTogetherRoom,
+    isHost: Boolean,
+    onLeave: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pulseAlpha",
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // Room Code Banner
+        Surface(
+            shape = RoundedCornerShape(18.dp),
+            color = Color(0xFF141728),
+            border = androidx.compose.foundation.BorderStroke(
+                width = 1.5.dp,
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xFF6C63FF), Color(0xFF00D9FF)),
+                ),
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF00FFA3).copy(alpha = pulseAlpha)),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isHost) "YOU ARE HOSTING" else "CONNECTED AS LISTENER",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp,
+                        ),
+                        color = Color(0xFF00FFA3),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = room.roomId,
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 6.sp,
+                    ),
+                    color = Color.White,
+                )
+
+                Text(
+                    text = "${room.participantCount} participant${if (room.participantCount == 1) "" else "s"} connected",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF8E92BC),
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("VibeWave Room Code", room.roomId)
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, "Room code ${room.roomId} copied!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2E324E)),
+                    ) {
+                        Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Copy Code", fontSize = 13.sp)
+                    }
+
+                    Button(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "Join my VibeWave Listen Together room! Room code: ${room.roomId}\nDownload VibeWave: https://github.com/MishrajiiCode/vibewave",
+                                )
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Share Room Code"))
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF6C63FF),
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Share", fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // DJ Permission Access Card
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF141726),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF24283E)),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        if (room.hostOnlyControl) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                        contentDescription = null,
+                        tint = if (room.hostOnlyControl) Color(0xFFFFB300) else Color(0xFF00FFA3),
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = if (room.hostOnlyControl) "DJ Lock: Host Only" else "Collaborative DJ Mode",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                        )
+                        Text(
+                            text = if (isHost) {
+                                if (room.hostOnlyControl) "Only you can change tracks" else "Anyone in room can change tracks"
+                            } else {
+                                if (room.hostOnlyControl) "Only ${room.hostName} can change tracks" else "You can pick and change tracks!"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF8E92BC),
+                        )
+                    }
+                }
+
+                if (isHost) {
+                    Switch(
+                        checked = !room.hostOnlyControl,
+                        onCheckedChange = { collaborative ->
+                            ListenTogetherManager.setHostOnlyControl(!collaborative)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color(0xFF00FFA3),
+                            checkedTrackColor = Color(0xFF00FFA3).copy(alpha = 0.3f),
+                            uncheckedThumbColor = Color(0xFFFFB300),
+                            uncheckedTrackColor = Color(0xFFFFB300).copy(alpha = 0.3f),
+                        ),
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Synced Track Card
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF131522),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF22263C)),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "SYNCHRONIZED TRACK",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                        color = Color(0xFF8E92BC),
+                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (room.isPlaying) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                            contentDescription = null,
+                            tint = if (room.isPlaying) Color(0xFF00FFA3) else Color(0xFFFFB300),
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (room.isPlaying) "Playing in Sync" else "Paused",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (room.isPlaying) Color(0xFF00FFA3) else Color(0xFFFFB300),
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (room.thumbnailUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = room.thumbnailUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(10.dp)),
+                        )
+                    } else {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFF6C63FF).copy(alpha = 0.2f),
+                            modifier = Modifier.size(56.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Rounded.GraphicEq,
+                                    contentDescription = null,
+                                    tint = Color(0xFF9B8FFF),
+                                    modifier = Modifier.size(28.dp),
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = room.songTitle.ifBlank { "Waiting for track..." },
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = room.songArtist.ifBlank { "Host: ${room.hostName}" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF8E92BC),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        // Action Buttons
+        Button(
+            onClick = onDismiss,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1E2135),
+                contentColor = Color.White,
+            ),
+        ) {
+            Text("Listen in Background (Keep in Sync)")
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = onLeave,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color(0xFFFF6B6B),
+            ),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF6B6B).copy(alpha = 0.4f)),
+        ) {
+            Text(if (isHost) "End Room for Everyone" else "Leave Room")
+        }
+    }
+}
+
+@Composable
+private fun RoomChatSection(
+    roomId: String,
+    messages: List<ListenTogetherManager.RoomChatMessage>,
+    myUid: String,
+) {
+    var inputText by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (messages.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Rounded.ChatBubble,
+                        contentDescription = null,
+                        tint = Color(0xFF3A3E5C),
+                        modifier = Modifier.size(48.dp),
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "No messages yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF8E92BC),
+                    )
+                    Text(
+                        text = "Say hello to everyone in the room!",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF63678E),
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(messages, key = { it.id }) { msg ->
+                    val isMe = msg.senderUid == myUid
+                    val timeStr = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(msg.timestamp))
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = if (isMe) Alignment.End else Alignment.Start,
+                    ) {
+                        if (!isMe) {
+                            Text(
+                                text = msg.senderName,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFF00D9FF),
+                                modifier = Modifier.padding(start = 6.dp, bottom = 2.dp),
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(
+                                topStart = 14.dp,
+                                topEnd = 14.dp,
+                                bottomStart = if (isMe) 14.dp else 2.dp,
+                                bottomEnd = if (isMe) 2.dp else 14.dp,
+                            ),
+                            color = if (isMe) Color(0xFF6C63FF) else Color(0xFF1E2235),
+                            modifier = Modifier.padding(horizontal = 2.dp),
+                        ) {
+                            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                                Text(
+                                    text = msg.text,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.White,
+                                )
+                                Text(
+                                    text = timeStr,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.align(Alignment.End).padding(top = 2.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Chat Input Bar
+        Surface(
+            color = Color(0xFF141726),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = inputText,
+                    onValueChange = { inputText = it },
+                    placeholder = { Text("Type a message...", color = Color(0xFF8E92BC)) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF00D9FF),
+                        unfocusedBorderColor = Color(0xFF282B3E),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                    ),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(20.dp),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(
+                        onSend = {
+                            if (inputText.isNotBlank()) {
+                                ListenTogetherManager.sendChatMessage(inputText)
+                                inputText = ""
+                            }
+                        },
+                    ),
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                IconButton(
+                    onClick = {
+                        if (inputText.isNotBlank()) {
+                            ListenTogetherManager.sendChatMessage(inputText)
+                            inputText = ""
+                        }
+                    },
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(if (inputText.isNotBlank()) Color(0xFF00D9FF) else Color(0xFF282B3E)),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.Send,
+                        contentDescription = "Send",
+                        tint = if (inputText.isNotBlank()) Color(0xFF0A0A1F) else Color(0xFF8E92BC),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RoomMembersSection(
+    room: ListenTogetherManager.ListenTogetherRoom,
+    myUid: String,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+    ) {
+        Text(
+            text = "Connected Listeners (${room.participants.size})",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            color = Color.White,
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
+
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            val sortedEntries = room.participants.entries.sortedByDescending { it.key == room.hostUid }
+
+            items(sortedEntries.toList(), key = { it.key }) { (uid, name) ->
+                val isHost = uid == room.hostUid
+                val isMe = uid == myUid
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF141726),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (isHost) Color(0xFFFFB300).copy(alpha = 0.5f) else Color(0xFF23273D),
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (isHost) Color(0xFFFFB300).copy(alpha = 0.2f) else Color(0xFF6C63FF).copy(alpha = 0.2f),
+                                modifier = Modifier.size(40.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = name.take(1).uppercase(),
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = if (isHost) Color(0xFFFFB300) else Color(0xFF9B8FFF),
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = name,
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color.White,
+                                    )
+                                    if (isMe) {
+                                        Text(
+                                            text = " (You)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFF00D9FF),
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = if (isHost) "Room Host & DJ" else "Listener",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF8E92BC),
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isHost) Color(0xFFFFB300).copy(alpha = 0.15f) else Color(0xFF00FFA3).copy(alpha = 0.15f),
+                        ) {
+                            Text(
+                                text = if (isHost) "👑 Host" else "🎧 Joined",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = if (isHost) Color(0xFFFFB300) else Color(0xFF00FFA3),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -519,258 +1189,3 @@ private fun JoinRoomSection(
         }
     }
 }
-
-@Composable
-private fun ActiveRoomContent(
-    room: ListenTogetherManager.ListenTogetherRoom,
-    isHost: Boolean,
-    onLeave: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val context = LocalContext.current
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "pulseAlpha",
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        // Room Code Banner
-        Surface(
-            shape = RoundedCornerShape(18.dp),
-            color = Color(0xFF141728),
-            border = androidx.compose.foundation.BorderStroke(
-                width = 1.5.dp,
-                brush = Brush.horizontalGradient(
-                    listOf(Color(0xFF6C63FF), Color(0xFF00D9FF)),
-                ),
-            ),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF00FFA3).copy(alpha = pulseAlpha)),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (isHost) "YOU ARE HOSTING" else "CONNECTED TO ROOM",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.2.sp,
-                        ),
-                        color = Color(0xFF00FFA3),
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = room.roomId,
-                    style = MaterialTheme.typography.displaySmall.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 6.sp,
-                    ),
-                    color = Color.White,
-                )
-
-                Text(
-                    text = "${room.participantCount} participant${if (room.participantCount == 1) "" else "s"} listening",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF8E92BC),
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("VibeWave Room Code", room.roomId)
-                            clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "Room code ${room.roomId} copied!", Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2E324E)),
-                    ) {
-                        Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Copy Code", fontSize = 13.sp)
-                    }
-
-                    Button(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(
-                                    Intent.EXTRA_TEXT,
-                                    "Join my VibeWave Listen Together room! Room code: ${room.roomId}\nDownload VibeWave: https://github.com/MishrajiiCode/vibewave",
-                                )
-                            }
-                            context.startActivity(Intent.createChooser(intent, "Share Room Code"))
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF6C63FF),
-                            contentColor = Color.White,
-                        ),
-                    ) {
-                        Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Share", fontSize = 13.sp)
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Synced Track Card
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF131522),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF22263C)),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "SYNCHRONIZED TRACK",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                        color = Color(0xFF8E92BC),
-                    )
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            if (room.isPlaying) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
-                            contentDescription = null,
-                            tint = if (room.isPlaying) Color(0xFF00FFA3) else Color(0xFFFFB300),
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (room.isPlaying) "Playing in Sync" else "Paused",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (room.isPlaying) Color(0xFF00FFA3) else Color(0xFFFFB300),
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (room.thumbnailUrl.isNotBlank()) {
-                        AsyncImage(
-                            model = room.thumbnailUrl,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(10.dp)),
-                        )
-                    } else {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFF6C63FF).copy(alpha = 0.2f),
-                            modifier = Modifier.size(56.dp),
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Rounded.GraphicEq,
-                                    contentDescription = null,
-                                    tint = Color(0xFF9B8FFF),
-                                    modifier = Modifier.size(28.dp),
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = room.songTitle.ifBlank { "Waiting for host track..." },
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            text = room.songArtist.ifBlank { "Host: ${room.hostName}" },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF8E92BC),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(30.dp))
-
-        // Action Buttons
-        Button(
-            onClick = onDismiss,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1E2135),
-                contentColor = Color.White,
-            ),
-        ) {
-            Text("Listen in Background (Keep in Sync)")
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedButton(
-            onClick = onLeave,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color(0xFFFF6B6B),
-            ),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF6B6B).copy(alpha = 0.4f)),
-        ) {
-            Text(if (isHost) "End Room for Everyone" else "Leave Room")
-        }
-    }
-}
-

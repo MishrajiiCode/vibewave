@@ -3,16 +3,29 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- First acoustic bar (short) -->
+    <!-- "V" monogram -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M4.5,9.5 C4.5,8.7 5.5,8.7 5.5,9.5 L5.5,14.5 C5.5,15.3 4.5,15.3 4.5,14.5 Z" />
-    <!-- Second acoustic bar (tall) -->
+        android:pathData="M3,8 L6,16 L9,8 L7.5,8 L6,13.5 L4.5,8 Z" />
+    <!-- Wave arc 1 -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M8.5,7.5 C8.5,6.7 9.5,6.7 9.5,7.5 L9.5,16.5 C9.5,17.3 8.5,17.3 8.5,16.5 Z" />
-    <!-- Play Triangle -->
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M11,9 Q13.5,12 11,15"/>
+    <!-- Wave arc 2 -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M12.5,7.0 C12.5,6.2 13.4,5.7 14.1,6.2 L20.8,11.2 C21.4,11.6 21.4,12.4 20.8,12.8 L14.1,17.8 C13.4,18.3 12.5,17.8 12.5,17.0 Z" />
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M14.5,7 Q18,12 14.5,17"/>
+    <!-- Wave arc 3 -->
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M18,5 Q22.5,12 18,19"/>
 </vector>
