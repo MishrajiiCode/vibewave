@@ -1,4 +1,4 @@
-﻿# VibeWave v2.0.0
+# VibeWave v2.0.0
 
 Premium music streaming app with YouTube integration, Firebase backend, and cutting-edge social listening features.
 
