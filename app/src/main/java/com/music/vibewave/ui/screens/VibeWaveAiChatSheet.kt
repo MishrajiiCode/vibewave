@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Close
@@ -80,6 +81,24 @@ data class AiChatMessage(
     val recommendedSongs: List<Song> = emptyList(),
     val detectedMood: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
+)
+
+data class QuickMoodPill(
+    val emoji: String,
+    val title: String,
+    val prompt: String,
+    val gradientColors: List<Color>,
+)
+
+private val QUICK_MOOD_PILLS = listOf(
+    QuickMoodPill("☕", "Chill Acoustic", "Play calming chill acoustic and lofi songs for relaxing", listOf(Color(0xFF00B894), Color(0xFF00CEC9))),
+    QuickMoodPill("⚡", "Phonk & Bass", "High-energy drift phonk and bass-boosted workout beats", listOf(Color(0xFFE84393), Color(0xFFFF7675))),
+    QuickMoodPill("🔥", "Gym Workout", "Intense energetic workout and motivation tracks to push limits", listOf(Color(0xFFFF7675), Color(0xFFFAB1A0))),
+    QuickMoodPill("❤️", "Romantic Hindi", "Soulful romantic Hindi melodies and acoustic Bollywood love songs", listOf(Color(0xFFFF4757), Color(0xFFFF6B81))),
+    QuickMoodPill("🌙", "Midnight Drive", "Late night synthwave and atmospheric midnight drive music", listOf(Color(0xFF6C5CE7), Color(0xFFA29BFE))),
+    QuickMoodPill("🎲", "Surprise Me", "Surprise me with a fresh mix of trending viral hits and undiscovered gems", listOf(Color(0xFFFFA502), Color(0xFFFFD32A))),
+    QuickMoodPill("🚀", "Deep Focus", "Ambient instrumental music for deep focus, studying, and coding", listOf(Color(0xFF0984E3), Color(0xFF74B9FF))),
+    QuickMoodPill("🎉", "Party Anthems", "Upbeat party dance anthems and club bangers", listOf(Color(0xFFFD79A8), Color(0xFFE84393))),
 )
 
 /**
@@ -291,55 +310,91 @@ fun VibeWaveAiChatSheet(
                 }
             }
 
-            // Input Bar
+            // Input Bar & 1-Tap Mood Carousel
             Surface(
                 color = Color(0xFF141624),
                 modifier = Modifier
                     .fillMaxWidth()
                     .imePadding(),
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = inputText,
-                        onValueChange = { inputText = it },
-                        placeholder = { Text("Ask about songs, vibes, or app features...") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(onSend = { handleSend(inputText) }),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF6C5CE7),
-                            unfocusedBorderColor = Color(0xFF2B2E46),
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedPlaceholderColor = Color.White.copy(alpha = 0.4f),
-                            unfocusedPlaceholderColor = Color.White.copy(alpha = 0.4f),
-                        ),
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    IconButton(
-                        onClick = { handleSend(inputText) },
-                        enabled = inputText.isNotBlank() && !isThinking,
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // 1-Tap Quick Mood Pill Carousel
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp),
                     ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = if (inputText.isNotBlank() && !isThinking) Color(0xFF6C5CE7) else Color(0xFF22263C),
-                            modifier = Modifier.size(42.dp),
+                        items(QUICK_MOOD_PILLS) { pill ->
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = Color(0xFF1E2138),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    Brush.linearGradient(pill.gradientColors.map { it.copy(alpha = 0.65f) }),
+                                ),
+                                modifier = Modifier.clickable { handleSend(pill.prompt) },
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(text = pill.emoji, fontSize = 13.sp)
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = pill.title,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = Color.White,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        OutlinedTextField(
+                            value = inputText,
+                            onValueChange = { inputText = it },
+                            placeholder = { Text("Ask about songs, vibes, or app features...") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                            keyboardActions = KeyboardActions(onSend = { handleSend(inputText) }),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF6C5CE7),
+                                unfocusedBorderColor = Color(0xFF2B2E46),
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedPlaceholderColor = Color.White.copy(alpha = 0.4f),
+                                unfocusedPlaceholderColor = Color.White.copy(alpha = 0.4f),
+                            ),
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        IconButton(
+                            onClick = { handleSend(inputText) },
+                            enabled = inputText.isNotBlank() && !isThinking,
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.AutoMirrored.Rounded.Send,
-                                    contentDescription = "Send",
-                                    tint = if (inputText.isNotBlank() && !isThinking) Color.White else Color.White.copy(alpha = 0.3f),
-                                    modifier = Modifier.size(20.dp),
-                                )
+                            Surface(
+                                shape = CircleShape,
+                                color = if (inputText.isNotBlank() && !isThinking) Color(0xFF6C5CE7) else Color(0xFF22263C),
+                                modifier = Modifier.size(42.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.AutoMirrored.Rounded.Send,
+                                        contentDescription = "Send",
+                                        tint = if (inputText.isNotBlank() && !isThinking) Color.White else Color.White.copy(alpha = 0.3f),
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
                             }
                         }
                     }
@@ -446,7 +501,7 @@ private fun ChatBubble(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
-                                    Icons.Rounded.PlaylistPlay,
+                                    Icons.AutoMirrored.Rounded.PlaylistPlay,
                                     contentDescription = null,
                                     tint = Color(0xFF00CEC9),
                                     modifier = Modifier.size(14.dp),
@@ -495,7 +550,7 @@ private fun ChatBubble(
                                             overflow = TextOverflow.Ellipsis,
                                         )
                                         Text(
-                                            text = song.artist ?: "Unknown Artist",
+                                            text = song.artist.ifBlank { "Unknown Artist" },
                                             style = MaterialTheme.typography.labelSmall,
                                             color = Color(0xFF8E92BC),
                                             maxLines = 1,
@@ -534,14 +589,27 @@ private suspend fun processUserQuery(query: String): AiChatMessage = withContext
     val lower = query.lowercase().trim()
 
     // 1. App Knowledge & Feature Inquiries
-    if (lower.contains("streak") || lower.contains("flame")) {
+    if (lower.contains("streak") || lower.contains("flame") || lower.contains("multiplier")) {
         return@withContext AiChatMessage(
             isAi = true,
-            text = "🔥 **Daily Listening Streaks in VibeWave:**\n\n" +
+            text = "🔥 **Daily Listening Streaks & Multiplier Boosts:**\n\n" +
                     "• **How it works**: Play at least one song every day to maintain your streak!\n" +
-                    "• **Streak Flame**: Displayed right at the front of your top bar (`🔥 1`, `🔥 7`, etc.).\n" +
-                    "• **Daily XP**: You get **+50 bonus Vibe XP** each day your streak continues.\n" +
-                    "• **Milestones**: Hitting 3, 7, 14, and 30-day streaks unlocks prestigious trophies and broadcasts your milestone to the Engagement Center!",
+                    "• **Streak Multipliers** (Multiplies ALL listening XP):\n" +
+                    "  - **3–6 Days**: **1.2x XP Multiplier** (`🔥 3 • 1.2x`)\n" +
+                    "  - **7–13 Days**: **1.5x Golden Flame Boost** (`🔥 7 • 1.5x`)\n" +
+                    "  - **14+ Days**: **2.0x Godmode Double XP** (`🔥 14 • 2.0x`)\n" +
+                    "• **Daily XP**: You earn **+50 bonus Vibe XP** each day your streak continues.\n" +
+                    "• **Milestones**: Hitting 3, 7, 14, and 30-day streaks unlocks trophies and broadcasts your achievement to the Engagement Center!",
+        )
+    }
+
+    if (lower.contains("box") || lower.contains("mystery") || lower.contains("gift") || lower.contains("claim")) {
+        return@withContext AiChatMessage(
+            isAi = true,
+            text = "🎁 **Daily Mystery Vibe Box:**\n\n" +
+                    "• **Claim Daily**: Open the **Engagement Center** once every 24 hours to claim your mystery box.\n" +
+                    "• **Bonus Rewards**: Awards between **+25 to +100 bonus Vibe XP** on each claim.\n" +
+                    "• **Streak Multiplied**: Your active streak multiplier boosts your box reward — up to 2.0x double XP at 14+ days!",
         )
     }
 
@@ -550,10 +618,11 @@ private suspend fun processUserQuery(query: String): AiChatMessage = withContext
             isAi = true,
             text = "⚡ **Vibe XP & Level Progression System:**\n\n" +
                     "• **Earning XP**:\n" +
-                    "  - **+5 XP** per minute of real playback.\n" +
+                    "  - **+5 XP** per minute of real playback (boosted by streak multiplier).\n" +
                     "  - **+15 XP** for completing a full track.\n" +
                     "  - **+30 XP** for joining a *Listen Together* room.\n" +
                     "  - **+50 XP** for daily listening streaks.\n" +
+                    "  - **+25 to +100 XP** from daily Mystery Vibe Boxes.\n" +
                     "  - **+5 XP** for congratulating fellow listeners in the Hub!\n\n" +
                     "• **Level Tiers (1 to 25)**: Climb from **Acoustic Novice** up through *Sound Explorer*, *Vibe Master*, *Sonic Alchemist*, and reach the supreme rank of **Cosmic Audiophile**!",
         )

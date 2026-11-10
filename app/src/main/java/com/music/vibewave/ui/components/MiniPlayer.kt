@@ -2,11 +2,19 @@ package com.music.vibewave.ui.components
 
 import com.music.vibewave.R
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +30,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,11 +38,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.music.vibewave.data.gamification.VibeRewardsManager
 import com.music.vibewave.data.model.ROW_ART_PX
 import com.music.vibewave.data.model.Song
 import com.music.vibewave.data.model.artworkAt
@@ -172,13 +185,20 @@ fun MiniPlayer(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
-                Text(
-                    text = song.artist,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = song.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (isPlaying) {
+                        Spacer(Modifier.width(6.dp))
+                        MiniPlayerLiveXpHud()
+                    }
+                }
             }
             if (isLoading) {
                 Box(Modifier.size(GLYPH_SLOT), contentAlignment = Alignment.Center) {
@@ -219,6 +239,105 @@ fun MiniPlayer(
                     modifier = Modifier.size(GLYPH_SIZE),
                 )
             }
+        }
+    }
+}
+
+/**
+ * Modern Micro-Equalizer & Live Vibe XP HUD for MiniPlayer.
+ * Visibly visualizes active track playback with animated frequency bars
+ * alongside real-time earned XP per minute boosted by the user's active streak.
+ */
+@Composable
+private fun MiniPlayerLiveXpHud() {
+    val rewardProfile by VibeRewardsManager.profile.collectAsStateWithLifecycle()
+    val multiplier = VibeRewardsManager.getStreakMultiplier(rewardProfile.streakDays)
+    val effectiveXpPerMin = (5 * multiplier).toInt()
+
+    val infiniteTransition = rememberInfiniteTransition(label = "microEq")
+    val bar1Height by infiniteTransition.animateFloat(
+        initialValue = 3f,
+        targetValue = 12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(420, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "b1",
+    )
+    val bar2Height by infiniteTransition.animateFloat(
+        initialValue = 11f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(310, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "b2",
+    )
+    val bar3Height by infiniteTransition.animateFloat(
+        initialValue = 5f,
+        targetValue = 13f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(480, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "b3",
+    )
+
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF1E2036).copy(alpha = 0.85f),
+        border = androidx.compose.foundation.BorderStroke(
+            0.5.dp,
+            Brush.horizontalGradient(
+                listOf(Color(0xFF00CEC9).copy(alpha = 0.6f), Color(0xFF6C5CE7).copy(alpha = 0.6f))
+            )
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 4.5.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            // Micro Equalizer Bars
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                modifier = Modifier.height(12.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .height(bar1Height.dp)
+                        .clip(RoundedCornerShape(1.dp))
+                        .background(Color(0xFF00CEC9)),
+                )
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .height(bar2Height.dp)
+                        .clip(RoundedCornerShape(1.dp))
+                        .background(Color(0xFF74B9FF)),
+                )
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .height(bar3Height.dp)
+                        .clip(RoundedCornerShape(1.dp))
+                        .background(Color(0xFFA29BFE)),
+                )
+            }
+
+            Spacer(Modifier.width(1.dp))
+
+            Text(
+                text = "⚡+$effectiveXpPerMin/m",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 9.sp,
+                    letterSpacing = (-0.2).sp,
+                ),
+                color = Color(0xFF81ECEC),
+            )
         }
     }
 }

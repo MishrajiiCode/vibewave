@@ -156,6 +156,9 @@ fun CommunitySheet(
             // Interactive Engagement Banner
             EngagementStatsBanner(profile = profile)
 
+            // Daily Mystery Vibe Box Card
+            DailyMysteryBoxCard()
+
             // Daily Quests Bar
             DailyQuestsSection(quests = dailyQuests)
 
@@ -283,7 +286,8 @@ private fun EngagementStatsBanner(profile: VibeRewardsManager.RewardProfile) {
                     }
                 }
 
-                // Daily Streak Pill
+                // Daily Streak Pill with Multiplier
+                val multiplier = VibeRewardsManager.getStreakMultiplier(profile.streakDays)
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = Color(0xFFFF4757).copy(alpha = 0.15f),
@@ -301,7 +305,7 @@ private fun EngagementStatsBanner(profile: VibeRewardsManager.RewardProfile) {
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = "${profile.streakDays}d Streak",
+                            text = if (multiplier > 1f) "${profile.streakDays}d (${multiplier}x)" else "${profile.streakDays}d Streak",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
                             color = Color(0xFFFFD32A),
                         )
@@ -338,6 +342,90 @@ private fun EngagementStatsBanner(profile: VibeRewardsManager.RewardProfile) {
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, fontWeight = FontWeight.Bold),
                     color = Color(0xFFFFB300),
                 )
+            }
+        }
+    }
+}
+
+/**
+ * 1-Tap Daily Mystery Vibe Box in the Engagement Center.
+ * Offers users a mystery gift box once every 24 hours, awarding +25 to +100 bonus Vibe XP
+ * boosted by their active streak multiplier, accompanied by a celebration modal!
+ */
+@Composable
+private fun DailyMysteryBoxCard() {
+    var isClaimed by remember { mutableStateOf(!VibeRewardsManager.canClaimDailyVibeBox()) }
+    val profile by VibeRewardsManager.profile.collectAsStateWithLifecycle()
+    val multiplier = VibeRewardsManager.getStreakMultiplier(profile.streakDays)
+
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = if (isClaimed) Color(0xFF131522) else Color(0xFF1B1B34),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (isClaimed) Brush.horizontalGradient(listOf(Color(0xFF282C44), Color(0xFF1E2134)))
+            else Brush.horizontalGradient(listOf(Color(0xFFFFB300), Color(0xFFFF4757)))
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f),
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isClaimed) Color(0xFF23263C) else Color(0xFFFFB300).copy(alpha = 0.2f),
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(text = if (isClaimed) "✅" else "🎁", fontSize = 18.sp)
+                    }
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        text = if (isClaimed) "Today's Mystery Vibe Box Claimed" else "Daily Mystery Vibe Box Ready!",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (isClaimed) Color(0xFF8E92BC) else Color.White,
+                    )
+                    Text(
+                        text = if (isClaimed) "Next mystery gift unlocks tomorrow" else "+25 to +100 XP (${multiplier}x streak boost active!)",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = if (isClaimed) Color(0xFF63678A) else Color(0xFFFFD32A),
+                    )
+                }
+            }
+
+            if (!isClaimed) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFFFF4757),
+                    modifier = Modifier.clickable {
+                        val xp = VibeRewardsManager.claimDailyVibeBox()
+                        if (xp > 0L) {
+                            isClaimed = true
+                        }
+                    },
+                ) {
+                    Text(
+                        text = "Claim ✨",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Black,
+                            fontSize = 11.5.sp,
+                        ),
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                    )
+                }
             }
         }
     }

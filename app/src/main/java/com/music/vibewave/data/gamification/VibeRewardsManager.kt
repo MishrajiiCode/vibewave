@@ -94,7 +94,10 @@ object VibeRewardsManager {
         val songsPlayedCount: Int = 0,
         val minutesPlayedCount: Long = 0L,
         val unlockedBadgeIds: Set<String> = emptySet(),
-    )
+    ) {
+        val streakMultiplier: Float get() = getStreakMultiplier(streakDays)
+        val streakMultiplierTag: String get() = if (streakMultiplier > 1f) "${streakMultiplier}x" else ""
+    }
 
     data class LeaderboardEntry(
         val rank: Int,
@@ -302,6 +305,49 @@ object VibeRewardsManager {
         }
     }
 
+    fun getStreakMultiplier(streakDays: Int): Float {
+        return when {
+            streakDays >= 14 -> 2.0f
+            streakDays >= 7 -> 1.5f
+            streakDays >= 3 -> 1.2f
+            else -> 1.0f
+        }
+    }
+
+    fun canClaimDailyVibeBox(): Boolean {
+        val p = prefs ?: return false
+        val lastClaim = p.getString("last_daily_claim_date", "") ?: ""
+        return lastClaim != getTodayDateString()
+    }
+
+    fun claimDailyVibeBox(): Long {
+        if (!canClaimDailyVibeBox()) return 0L
+        val p = prefs ?: return 0L
+        val today = getTodayDateString()
+        p.edit().putString("last_daily_claim_date", today).apply()
+
+        val baseBonus = (25..100).random().toLong()
+        val multiplier = getStreakMultiplier(_profile.value.streakDays)
+        val finalXp = (baseBonus * multiplier).toLong().coerceAtLeast(25L)
+
+        addXp(finalXp, "Mystery Vibe Box Claimed 🎁")
+
+        val celebration = CelebrationEvent(
+            type = "DAILY_BOX",
+            title = "Mystery Vibe Box Opened!",
+            subtitle = "+$finalXp Vibe XP Awarded 🎁",
+            iconEmoji = "🎁",
+            xpBonus = finalXp,
+            description = if (multiplier > 1f) {
+                "You claimed today's Mystery Vibe Box with an active ${multiplier}x Streak Multiplier! Keep your flame alive for even greater rewards."
+            } else {
+                "You claimed today's Mystery Vibe Box! Reach a 3-day streak to unlock a 1.2x XP multiplier on future mystery boxes."
+            },
+        )
+        _celebrationEvent.tryEmit(celebration)
+        return finalXp
+    }
+
     private fun checkDailyStreak() {
         val today = getTodayDateString()
         val yesterday = getYesterdayDateString()
@@ -323,17 +369,24 @@ object VibeRewardsManager {
                 syncToFirestore()
 
                 if (newStreak in listOf(3, 7, 14, 30)) {
+                    val multiplier = getStreakMultiplier(newStreak)
+                    val milestoneSubtitle = when (newStreak) {
+                        3 -> "1.2x XP Multiplier Unlocked! ⚡"
+                        7 -> "1.5x Golden Flame Multiplier Unlocked! 🔥"
+                        14 -> "2.0x Godmode Double XP Unlocked! 👑"
+                        else -> "Streak Legend Milestone 🔥"
+                    }
                     val celebration = CelebrationEvent(
                         type = "STREAK",
                         title = "$newStreak-Day Listening Streak!",
-                        subtitle = "Streak Milestone 🔥",
+                        subtitle = milestoneSubtitle,
                         iconEmoji = "🔥",
                         xpBonus = 100L,
-                        description = "You've listened to music for $newStreak consecutive days. The rhythm never stops!",
+                        description = "You've listened to music for $newStreak consecutive days. Enjoy an active ${multiplier}x XP boost on all listening time!",
                     )
                     _celebrationEvent.tryEmit(celebration)
                     CommunityManager.broadcastAchievement(
-                        badgeTitle = "$newStreak-Day Streak",
+                        badgeTitle = "$newStreak-Day Streak (${multiplier}x)",
                         badgeEmoji = "🔥",
                         xpReward = 100L,
                         streakDays = newStreak,
@@ -360,9 +413,16 @@ object VibeRewardsManager {
     fun addXp(amount: Long, reason: String) {
         if (amount <= 0) return
         val current = _profile.value
+        val multiplier = getStreakMultiplier(current.streakDays)
+        // Apply streak multiplier to listening playback, songs, and mystery box
+        val finalAmount = if (multiplier > 1f && (reason.contains("playback") || reason.contains("Track") || reason.contains("min"))) {
+            (amount * multiplier).toLong().coerceAtLeast(1L)
+        } else {
+            amount
+        }
         val oldLevel = current.level
-        val newTotal = current.totalXp + amount
-        val newWeekly = current.weeklyXp + amount
+        val newTotal = current.totalXp + finalAmount
+        val newWeekly = current.weeklyXp + finalAmount
 
         updateProfileState(
             uid = current.uid,

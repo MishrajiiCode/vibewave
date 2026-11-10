@@ -219,29 +219,35 @@ fun FrostedTopBar(
                             .clickable { onLeaderboardClick?.invoke() },
                     )
 
-                    // 1. Daily Streak Pill (Directly replaces "VibeWave" text)
+                    // 1. Daily Streak Pill with Dynamic Multiplier Flame
                     if (onLeaderboardClick != null) {
                         Spacer(modifier = Modifier.width(6.dp))
                         val rewardProfile by VibeRewardsManager.profile.collectAsStateWithLifecycle()
+                        val streakDays = rewardProfile.streakDays
+                        val multiplier = VibeRewardsManager.getStreakMultiplier(streakDays)
+                        val flameBg = when {
+                            multiplier >= 2.0f -> listOf(Color(0xFF8A2BE2).copy(alpha = 0.45f), Color(0xFFFF007F).copy(alpha = 0.35f))
+                            multiplier >= 1.5f -> listOf(Color(0xFFFF9F43).copy(alpha = 0.45f), Color(0xFFFFD32A).copy(alpha = 0.35f))
+                            else -> listOf(Color(0xFFFF4757).copy(alpha = 0.35f), Color(0xFFFFA502).copy(alpha = 0.25f))
+                        }
+                        val flameBorder = when {
+                            multiplier >= 2.0f -> listOf(Color(0xFFFF007F), Color(0xFF8A2BE2))
+                            multiplier >= 1.5f -> listOf(Color(0xFFFFD32A), Color(0xFFFF9F43))
+                            else -> listOf(Color(0xFFFF4757).copy(alpha = 0.85f), Color(0xFFFFD32A).copy(alpha = 0.85f))
+                        }
+                        val flameTint = when {
+                            multiplier >= 2.0f -> Color(0xFFFF007F)
+                            multiplier >= 1.5f -> Color(0xFFFFD32A)
+                            else -> Color(0xFFFF4757)
+                        }
+
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(
-                                            Color(0xFFFF4757).copy(alpha = 0.35f),
-                                            Color(0xFFFFA502).copy(alpha = 0.25f),
-                                        )
-                                    )
-                                )
+                                .background(Brush.linearGradient(flameBg))
                                 .border(
                                     width = 1.dp,
-                                    brush = Brush.linearGradient(
-                                        listOf(
-                                            Color(0xFFFF4757).copy(alpha = 0.85f),
-                                            Color(0xFFFFD32A).copy(alpha = 0.85f),
-                                        )
-                                    ),
+                                    brush = Brush.linearGradient(flameBorder),
                                     shape = RoundedCornerShape(16.dp),
                                 )
                                 .clickable { onLeaderboardClick() }
@@ -252,17 +258,17 @@ fun FrostedTopBar(
                                 Icon(
                                     Icons.Rounded.LocalFireDepartment,
                                     contentDescription = "Daily Streak",
-                                    tint = Color(0xFFFF4757),
+                                    tint = flameTint,
                                     modifier = Modifier.size(15.dp),
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text(
-                                    text = "${rewardProfile.streakDays}",
+                                    text = if (multiplier > 1f) "$streakDays • ${multiplier}x" else "$streakDays",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Black,
-                                        fontSize = 12.sp,
+                                        fontSize = 11.5.sp,
                                     ),
-                                    color = Color(0xFFFFD32A),
+                                    color = if (multiplier >= 2.0f) Color(0xFFFF77A9) else Color(0xFFFFD32A),
                                 )
                             }
                         }

@@ -241,6 +241,7 @@ private fun UserLevelBanner(profile: VibeRewardsManager.RewardProfile) {
                 }
 
                 // Daily Streak Badge
+                val streakMultiplier = VibeRewardsManager.getStreakMultiplier(profile.streakDays)
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = Color(0xFFFF7675).copy(alpha = 0.15f),
@@ -259,7 +260,7 @@ private fun UserLevelBanner(profile: VibeRewardsManager.RewardProfile) {
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "${profile.streakDays} Day${if (profile.streakDays == 1) "" else "s"}",
+                            text = if (streakMultiplier > 1f) "${profile.streakDays}d (${streakMultiplier}x Boost)" else "${profile.streakDays} Day${if (profile.streakDays == 1) "" else "s"}",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = Color(0xFFFF7675),
                         )
@@ -553,8 +554,10 @@ private fun LeaderboardRow(
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFF8E92BC),
                     )
+                    val rowMult = VibeRewardsManager.getStreakMultiplier(entry.streakDays)
+                    val streakText = if (rowMult > 1f) "🔥 ${entry.streakDays}d (${rowMult}x)" else "🔥 ${entry.streakDays}d"
                     Text(
-                        text = "🎧 ${entry.minutesPlayed}m • 🎵 ${entry.songsPlayed} • 🔥 ${entry.streakDays}d",
+                        text = "🎧 ${entry.minutesPlayed}m • 🎵 ${entry.songsPlayed} • $streakText",
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
                         color = Color(0xFF00CEC9),
                     )
