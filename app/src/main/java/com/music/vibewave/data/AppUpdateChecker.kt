@@ -103,12 +103,12 @@ object AppUpdateChecker {
             return """
                 ### 🚀 What's New in VibeWave v$version
 
-                - 💬 **Live In-Room Chat**: Chat in real-time with everyone in your Listen Together room!
-                - 👥 **Connected Members List**: View everyone listening with "👑 Host / DJ" and "🎧 Listener" badges.
-                - 🔒 **Host DJ Permission Controls**: Host can lock playback controls or switch to Collaborative Mode so anyone can pick songs!
-                - 🎨 **Unified Brand Icon Across All Screens**: Fixed app launch splash screen and in-app top bar logo to display the new vector soundwave monogram everywhere.
-                - 🎧 **Studio Audio Quality & Equalizer**: 10-band precision EQ, bass boost, and lossless headroom.
-                - 📲 **1-Tap Seamless In-App Updates**: Instant in-place installation without leaving the app!
+                - 🔥 **Top Bar Daily Streak**: Live listening streak flame counter right in the top bar!
+                - ⚡ **Gamified XP & Levels**: Earn XP by playing songs, maintain streaks, and advance through 25 music ranks (Novice to Cosmic Audiophile).
+                - 🏆 **Weekly Community Leaderboard**: Real-time podiums and weekly chart rankings with 🥇 🥈 🥉 medals.
+                - 🎖️ **Unlockable Trophies & Badges**: Unlock Night Owl, Marathoner, Better Together, and Audio Sculptor badges.
+                - 💬 **Live In-Room Chat & DJ Mode**: Real-time Listen Together chat with Host DJ permissions.
+                - 🎨 **Unified Brand Icon**: Custom acoustic vector logo across all launch screens and app surfaces.
             """.trimIndent()
         }
         return rawNotes ?: ""

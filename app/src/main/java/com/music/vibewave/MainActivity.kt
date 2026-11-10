@@ -219,6 +219,8 @@ import kotlinx.coroutines.isActive
 import com.music.vibewave.ui.screens.SplashScreen
 import com.music.vibewave.data.firebase.ListenTogetherManager
 import com.music.vibewave.ui.screens.ListenTogetherSheet
+import com.music.vibewave.ui.screens.LeaderboardSheet
+import com.music.vibewave.data.gamification.VibeRewardsManager
 import com.music.vibewave.ui.screens.CommunitySheet
 import java.util.Locale
 
@@ -548,6 +550,7 @@ private fun VibeWaveApp(
     var showUpdateDialog by remember { mutableStateOf(false) }
     var showCommunitySheet by remember { mutableStateOf(false) }
     var showListenTogetherSheet by remember { mutableStateOf(false) }
+    var showLeaderboardSheet by remember { mutableStateOf(false) }
     val updateAvailable by viewModel.updateAvailable.collectAsStateWithLifecycle()
 
     /**
@@ -574,6 +577,26 @@ private fun VibeWaveApp(
         }
         if (activity?.intent?.getBooleanExtra("open_ai_picks", false) == true) {
             viewModel.openDetail("ai:picks", "AI Smart Picks ✨")
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        VibeRewardsManager.levelUpEvent.collect { (lvl, title) ->
+            android.widget.Toast.makeText(
+                context,
+                "🎉 LEVEL UP! You reached Level $lvl: $title ⚡",
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        VibeRewardsManager.badgeUnlockedEvent.collect { badge ->
+            android.widget.Toast.makeText(
+                context,
+                "🏆 Achievement Unlocked: ${badge.iconEmoji} ${badge.title} (+${badge.xpReward} XP)",
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
         }
     }
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -2375,6 +2398,7 @@ private fun VibeWaveApp(
                     pullFraction = { currentPull?.distanceFraction ?: 0f },
                     onCommunityClick = { showCommunitySheet = true },
                     onListenTogetherClick = { showListenTogetherSheet = true },
+                    onLeaderboardClick = { showLeaderboardSheet = true },
                     onBack = when {
                         showDiscord -> ({ showDiscord = false })
                         showHistory -> ({ showHistory = false })
@@ -3153,6 +3177,13 @@ private fun VibeWaveApp(
                 currentSong = player.song,
                 isPlaying = player.isPlaying,
                 playbackPositionMs = controller?.currentPosition ?: 0L,
+            )
+        }
+
+        if (showLeaderboardSheet) {
+            BackHandler { showLeaderboardSheet = false }
+            LeaderboardSheet(
+                onDismiss = { showLeaderboardSheet = false },
             )
         }
 

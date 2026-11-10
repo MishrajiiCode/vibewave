@@ -1,38 +1,53 @@
-# 🚀 VibeWave v2.0.3 — In-Room Live Chat, DJ Access Control & Splash Icon Fix
+# 🚀 VibeWave v2.0.4 — Daily Streaks, Vibe XP & Weekly Community Leaderboard
 
-Welcome to **VibeWave v2.0.3**! This release enhances the **Listen Together** experience with **real-time in-room chat**, **connected members list**, **host DJ permission controls**, and fixes the app launcher splash & in-app logo to feature the new brand icon everywhere.
-
----
-
-### 💬 Live In-Room Chat
-- **Real-Time Messaging**: Chat live with everyone in your Listen Together room while enjoying synchronized music.
-- **Modern Message Bubbles**: Sender tags, timestamps, auto-scroll, and fluid glass styling.
+Welcome to **VibeWave v2.0.4**! This release turns VibeWave into an engaging, gamified musical journey with **top-bar daily listening streaks**, **Vibe XP & leveling progression**, an **achievement trophy case**, and real-time **weekly community leaderboards**.
 
 ---
 
-### 👑 Host DJ Access & Permission Controls
-- **DJ Lock Mode (Host Only)**: Only the room host can play, pause, seek, and select songs.
-- **Collaborative DJ Mode**: Host can toggle Collaborative Mode with one tap, allowing everyone in the room to pick tracks and manage playback together.
+### 🔥 Top Bar Daily Streak
+- **Animated Flame Counter**: Track your daily listening streak directly in the frosted top bar (`🔥 1`, `🔥 7`, etc.) right next to the brand logo.
+- **1-Tap Leaderboard Access**: Tap the flame streak pill to immediately open your complete level overview, weekly standings, and unlockable trophies.
+- **Daily Streak XP Bonuses**: Earn +50 bonus XP every consecutive day you listen to music.
 
 ---
 
-### 👥 Connected Listeners Directory
-- **Live Member List**: See everyone currently in the session with avatar badges:
-  - 👑 **Host / DJ**: Room owner with playback controls.
-  - 🎧 **Joined**: Listeners synced to the music.
+### ⚡ Gamified Vibe XP & Leveling Engine
+- **Earn XP Automatically**:
+  - **+10 XP** for each song played.
+  - **+15 XP** for listening through to the end of a track.
+  - **+30 XP** for jumping into a *Listen Together* room.
+  - **+50 XP** for daily streaks.
+- **25 Progression Levels**:
+  - Lv 1–2: 🎵 **Acoustic Novice**
+  - Lv 3–4: 🎧 **Sound Explorer**
+  - Lv 5–7: ⚡ **Rhythm Rider**
+  - Lv 8–10: 🌊 **Vibe Master**
+  - Lv 11–15: 🔮 **Sonic Alchemist**
+  - Lv 16–20: 👑 **Harmony Legend**
+  - Lv 21+: 🌌 **Cosmic Audiophile**
 
 ---
 
-### 🎨 Complete Brand Icon Unification
-- **App Launch Splash Screen**: Fixed the splash screen shown when launching the app to use the new vector acoustic sound-wave monogram.
-- **In-App Top Bar Logo**: The logo in the frosted top bar and replay summaries now displays the new vector branding instead of the old store triangle.
-- **Notification Logo**: Updated notification icon to match the new acoustic monogram.
+### 🏆 Weekly Community Leaderboard
+- **Weekly Fresh Competition**: Weekly chart resets every Monday at 00:00 so everyone has an equal shot at reaching #1!
+- **Podium Showcase**: 🥇 Gold, 🥈 Silver, and 🥉 Bronze podiums highlighting the top listeners in the community.
+- **Personal Rank Card**: Pinned view highlighting your rank, weekly score, and distance to next rank.
+
+---
+
+### 🎖️ Unlockable Achievement Trophy Case
+- 🌟 **First Note**: Play your first track.
+- 🔥 **Week on Fire**: Maintain a 7-day daily listening streak.
+- 🌙 **Night Owl**: Listen between midnight and 4:00 AM.
+- 🤝 **Better Together**: Jam in a live Listen Together room.
+- 🎛️ **Pure Acoustic**: Tune your audio using the 10-band equalizer.
+- 🚀 **Music Marathoner**: Play over 100 complete songs.
 
 ---
 
 ### 📲 1-Tap Seamless In-App Updates
-- Open VibeWave to receive the in-app update prompt and install v2.0.3 directly in seconds.
-- Signed with the official production keystore (`vibewave-release.jks`) for smooth in-place installation.
+- Open VibeWave to receive the in-app update prompt and install v2.0.4 directly in seconds.
+- Signed with the official production certificate (`vibewave-release.jks`) for smooth in-place installation.
 
 ---
 *Crafted with ❤️ by [Raj Mishra](https://github.com/MishrajiiCode)*

@@ -79,6 +79,9 @@ class VibeWaveApplication : Application(), SingletonImageLoader.Factory {
 
             // Initialize intelligent on-device AI curation
             com.music.vibewave.data.ai.AiPicksManager.init(this)
+
+            // Initialize Gamification & Rewards Engine
+            com.music.vibewave.data.gamification.VibeRewardsManager.init(this)
         }.onFailure {
             android.util.Log.w("VibeWaveApplication", "Firebase / Background Worker init skipped: ${it.message}")
         }

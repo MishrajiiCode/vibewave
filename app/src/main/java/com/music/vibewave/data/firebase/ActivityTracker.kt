@@ -26,6 +26,7 @@ object ActivityTracker {
     fun onSongPlay(song: Song) {
         FirestoreManager.recordPlay(song)
         com.music.vibewave.data.ai.AiPicksManager.onSongPlayed(song)
+        com.music.vibewave.data.gamification.VibeRewardsManager.onSongStarted(song)
         FirestoreManager.logActivity(
             activityType = "SONG_PLAY",
             title = "Playing: ${song.title}",

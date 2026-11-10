@@ -37,7 +37,9 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.WifiTethering
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import com.music.vibewave.data.firebase.ListenTogetherManager
+import com.music.vibewave.data.gamification.VibeRewardsManager
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -136,6 +138,7 @@ fun FrostedTopBar(
     pullFraction: () -> Float = { 0f },
     onCommunityClick: (() -> Unit)? = null,
     onListenTogetherClick: (() -> Unit)? = null,
+    onLeaderboardClick: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {},
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -315,6 +318,53 @@ fun FrostedTopBar(
                                         fontSize = 11.5.sp,
                                     ),
                                     color = Color.White,
+                                )
+                            }
+                        }
+                    }
+                    if (onLeaderboardClick != null) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        val rewardProfile by VibeRewardsManager.profile.collectAsStateWithLifecycle()
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(
+                                            Color(0xFFFF7675).copy(alpha = 0.35f),
+                                            Color(0xFFFFB300).copy(alpha = 0.20f),
+                                        )
+                                    )
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    brush = Brush.linearGradient(
+                                        listOf(
+                                            Color(0xFFFF7675).copy(alpha = 0.8f),
+                                            Color(0xFFFFB300).copy(alpha = 0.8f),
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(16.dp),
+                                )
+                                .clickable { onLeaderboardClick() }
+                                .padding(horizontal = 8.dp, vertical = 4.5.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.LocalFireDepartment,
+                                    contentDescription = "Daily Streak",
+                                    tint = Color(0xFFFF7675),
+                                    modifier = Modifier.size(13.5.dp),
+                                )
+                                Spacer(modifier = Modifier.width(3.5.dp))
+                                Text(
+                                    text = "${rewardProfile.streakDays}",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 11.5.sp,
+                                    ),
+                                    color = Color(0xFFFFD700),
                                 )
                             }
                         }
