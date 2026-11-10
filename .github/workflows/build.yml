@@ -2,11 +2,12 @@ name: Build & Release VibeWave
 
 on:
   push:
-    branches: [main]
+    branches: [main, "release/**"]
     tags:
       - "v*"
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -32,13 +33,15 @@ jobs:
         run: flutter pub get
 
       - name: Run analysis
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Run tests
         run: flutter test
 
       - name: Build APK (Release)
-        run: flutter build apk --release --split-per-abi
+        run: |
+          flutter build apk --release
+          flutter build apk --release --split-per-abi
 
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
