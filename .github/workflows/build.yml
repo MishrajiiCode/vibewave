@@ -81,8 +81,10 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
           files: ./apks/*.apk
           generate_release_notes: true
+          make_latest: true
           name: "VibeWave ${{ github.ref_name }}"
           body: |
             ## VibeWave ${{ github.ref_name }}
