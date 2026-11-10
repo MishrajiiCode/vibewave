@@ -103,11 +103,10 @@ object AppUpdateChecker {
             return """
                 ### 🚀 What's New in VibeWave v$version
 
-                - 🎧 **Enhanced Sound Quality & Acoustic Fidelity**: Tuned high-resolution audio rendering, enhanced dynamic headroom, expanded harmonic clarity, and optimized bit-perfect streaming pipeline.
-                - 🎛️ **Studio Equalizer Preset Calibration**: Fixed preset state transitions so Bass Boost and Virtualizer levels reset cleanly across all equalizer presets without state leakage.
-                - 🐛 **Playback & Background Bug Fixes**: Resolved audio buffer synchronization hiccups during fast track skips, enhanced session recovery, and fixed background playback pause edge-cases.
-                - ⚡ **Performance & Latency Enhancements**: Streamlined audio frame processing, reduced UI-to-audio latency, and stabilized memory consumption for extended listening sessions.
-                - 🧠 **AI Prompt Studio & Recommendation Polish**: Sharpened natural language prompt parsing and acoustic mode clustering for lightning-fast playlist curation.
+                - 🏠 **Restored Native High-Performance Home Page**: Full cosmic mesh gradient canvas, fluid Apple Music styling, trending carousels, and instant local playback.
+                - 🎧 **SimpMusic & Echo Music Audio Quality**: Bit-perfect lossless pipeline, maximum dynamic headroom, and calibrated studio equalizer.
+                - 📲 **Seamless In-App Updates**: Download and install future updates directly within VibeWave in one tap without installer errors.
+                - ⚡ **Zero-Latency Playback & Stability**: Instant track switching, background battery optimization, and rock-solid session recovery.
             """.trimIndent()
         }
         return rawNotes ?: ""
