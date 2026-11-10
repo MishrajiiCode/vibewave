@@ -13,13 +13,10 @@ import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart' hide PlayerState;
 import 'package:palette_generator/palette_generator.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../providers/player_provider.dart';
 import '../../providers/music_provider.dart';
-import '../../providers/settings_provider.dart';
 import '../../../data/services/audio_player_service.dart';
 import '../../../data/models/song_model.dart';
-import '../../widgets/song_tile.dart';
 import 'equalizer_sheet.dart';
 
 class PlayerScreen extends ConsumerStatefulWidget {
@@ -1046,7 +1043,7 @@ class _SpeedPitchSheetState extends State<_SpeedPitchSheet> {
             children: [
               const Text('Pitch',
                   style: TextStyle(color: Colors.white, fontSize: 15)),
-              Text('${_pitch.toStringAsFixed(2)}',
+              Text(_pitch.toStringAsFixed(2),
                   style: const TextStyle(
                       color: AppColors.secondary, fontSize: 14)),
             ],

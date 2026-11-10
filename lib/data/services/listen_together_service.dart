@@ -184,3 +184,4 @@ class ListenTogetherService {
     _currentRoomId = null;
   }
 }
+

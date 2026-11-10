@@ -3,12 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../data/models/listen_together_model.dart';
-import '../../../data/models/song_model.dart';
-import '../../../data/services/listen_together_service.dart';
 import '../../providers/listen_together_provider.dart';
 import '../../providers/player_provider.dart';
 
@@ -84,7 +81,7 @@ class _ListenTogetherScreenState
     });
     try {
       final service = ref.read(listenTogetherServiceProvider);
-      final roomId = await service.createRoom(currentSong);
+      await service.createRoom(currentSong);
       if (mounted) {
         setState(() => _isCreating = false);
         // Refresh providers
@@ -746,3 +743,4 @@ class _ChatBubble extends StatelessWidget {
     );
   }
 }
+

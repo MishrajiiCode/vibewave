@@ -49,7 +49,7 @@ class _EqualizerSheetState extends ConsumerState<EqualizerSheet> {
     if (mounted) {
       setState(() {
         _parameters = params;
-        _isEnabled = eq.enabled.value;
+        _isEnabled = eq.enabled;
         for (int i = 0; i < params.bands.length && i < 5; i++) {
           _gains[i] = params.bands[i].gain;
         }
@@ -275,3 +275,4 @@ class _EQBand extends StatelessWidget {
     );
   }
 }
+

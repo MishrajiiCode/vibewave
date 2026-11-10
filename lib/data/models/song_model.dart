@@ -66,6 +66,56 @@ class SongModel {
     );
   }
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'artist': artist,
+      'album': album,
+      'youtubeUrl': youtubeUrl,
+      'videoId': videoId,
+      'thumbnailUrl': thumbnailUrl,
+      'category': category,
+      'tags': tags,
+      'language': language,
+      'year': year,
+      'duration': duration,
+      'isFeatured': isFeatured,
+      'lyrics': lyrics,
+      'playCount': playCount,
+      'likeCount': likeCount,
+      'createdAt': createdAt.millisecondsSinceEpoch,
+      'updatedAt': updatedAt.millisecondsSinceEpoch,
+    };
+  }
+
+  factory SongModel.fromMap(Map<String, dynamic> data, String id) {
+    return SongModel(
+      id: id.isNotEmpty ? id : (data['id'] as String? ?? ''),
+      title: data['title'] as String? ?? '',
+      artist: data['artist'] as String? ?? '',
+      album: data['album'] as String? ?? '',
+      youtubeUrl: data['youtubeUrl'] as String? ?? '',
+      videoId: data['videoId'] as String? ?? '',
+      thumbnailUrl: data['thumbnailUrl'] as String? ?? '',
+      category: data['category'] as String? ?? '',
+      tags: List<String>.from(data['tags'] as List? ?? []),
+      language: data['language'] as String? ?? 'English',
+      year: data['year'] as int? ?? 2024,
+      duration: data['duration'] as int? ?? 0,
+      isFeatured: data['isFeatured'] as bool? ?? false,
+      lyrics: data['lyrics'] as String? ?? '',
+      playCount: data['playCount'] as int? ?? 0,
+      likeCount: data['likeCount'] as int? ?? 0,
+      createdAt: data['createdAt'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(data['createdAt'] as int)
+          : (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: data['updatedAt'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(data['updatedAt'] as int)
+          : (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
   Map<String, dynamic> toFirestore() {
     return {
       'title': title,

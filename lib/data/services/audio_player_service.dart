@@ -7,9 +7,9 @@ import 'dart:io';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/song_model.dart';
 import 'youtube_service.dart';
+import 'history_service.dart';
 
 class PlayerState {
   final SongModel? currentSong;
@@ -142,11 +142,6 @@ class AudioPlayerService {
 
     _player.playingStream.listen((isPlaying) {
       _stateSubject.add(_stateSubject.value.copyWith(isPlaying: isPlaying));
-      if (isPlaying) {
-        WakelockPlus.enable();
-      } else {
-        WakelockPlus.disable();
-      }
     });
 
     _player.processingStateStream.listen((state) {
@@ -215,6 +210,9 @@ class AudioPlayerService {
       await _player.play();
       _stateSubject.add(
           _stateSubject.value.copyWith(isLoading: false, isPlaying: true));
+
+      // Record to listening history asynchronously
+      HistoryService().addToHistory(song).catchError((_) {});
     } catch (e) {
       _stateSubject.add(_stateSubject.value.copyWith(isLoading: false));
       rethrow;
@@ -403,6 +401,5 @@ class AudioPlayerService {
     _silenceTimer?.cancel();
     _player.dispose();
     _stateSubject.close();
-    WakelockPlus.disable();
   }
 }

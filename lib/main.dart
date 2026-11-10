@@ -5,12 +5,20 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'data/services/history_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize local history & storage
+  try {
+    await HistoryService().init();
+  } catch (e) {
+    debugPrint('HistoryService initialization notice: $e');
+  }
 
   // Initialize Firebase (gracefully handle if not yet configured)
   try {

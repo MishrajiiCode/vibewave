@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../providers/music_provider.dart';
-import '../../providers/player_provider.dart';
 import '../../widgets/song_tile.dart';
 import '../../../data/services/history_service.dart';
 import '../../../data/models/song_model.dart';

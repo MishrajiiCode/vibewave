@@ -13,7 +13,7 @@ Premium music streaming app with YouTube integration, Firebase backend, and cutt
 - Crossfade between tracks (0-10 seconds)
 - Skip Silence feature
 - Synced Lyrics (line-by-line highlight)
-- Listening History (local, via Hive, last 50 songs)
+- Listening History (local, persistent, last 50 songs)
 - Settings Screen (quality, EQ, sleep timer, crossfade, speed)
 - Queue Reordering with drag-to-reorder
 - New Sound-wave App Icon (purple #6C63FF to cyan #00D9FF)
@@ -37,7 +37,7 @@ feat: Speed/pitch control
 feat: Crossfade
 feat: Skip silence
 feat: Synced lyrics
-feat: Listening history via Hive
+feat: Listening history (local, persistent)
 feat: Settings screen
 feat: Queue drag-to-reorder
 feat: Together nav item

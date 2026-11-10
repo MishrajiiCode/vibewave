@@ -1,12 +1,10 @@
 // lib/presentation/screens/settings/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
-import '../../../data/services/audio_player_service.dart';
 import '../../../data/services/youtube_service.dart';
 import '../../providers/player_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -19,18 +17,12 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  String _appVersion = '';
+  final String _appVersion = '2.0.0 (Build 2)';
   int? _sleepTimerMinutes;
 
   @override
   void initState() {
     super.initState();
-    _loadVersion();
-  }
-
-  Future<void> _loadVersion() async {
-    final info = await PackageInfo.fromPlatform();
-    if (mounted) setState(() => _appVersion = info.version);
   }
 
   @override
@@ -344,3 +336,4 @@ class _TimerChip extends StatelessWidget {
     );
   }
 }
+
