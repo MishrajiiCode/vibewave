@@ -11,15 +11,7 @@ build/
 android/local.properties
 android/.gradle/
 android/captures/
-android/gradlew
-android/gradlew.bat
-android/gradle/
 android/app/src/main/java/
-
-# Firebase - DO NOT commit these!
-google-services.json
-GoogleService-Info.plist
-lib/firebase_options.dart
 
 # IDE
 .idea/

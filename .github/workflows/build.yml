@@ -39,6 +39,9 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
       - name: Build APK (Release)
         run: flutter build apk --release --verbose
 
