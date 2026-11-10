@@ -215,7 +215,10 @@ import dev.chrisbanes.haze.hazeSource
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import com.music.vibewave.ui.screens.SplashScreen
+import com.music.vibewave.data.firebase.ListenTogetherManager
+import com.music.vibewave.ui.screens.ListenTogetherSheet
 import com.music.vibewave.ui.screens.CommunitySheet
 import java.util.Locale
 
@@ -544,6 +547,7 @@ private fun VibeWaveApp(
     var updateDialogShown by rememberSaveable { mutableStateOf(false) }
     var showUpdateDialog by remember { mutableStateOf(false) }
     var showCommunitySheet by remember { mutableStateOf(false) }
+    var showListenTogetherSheet by remember { mutableStateOf(false) }
     val updateAvailable by viewModel.updateAvailable.collectAsStateWithLifecycle()
 
     /**
@@ -697,6 +701,73 @@ private fun VibeWaveApp(
                 it.albumName,
                 it.localUri,
             )
+        }
+    }
+
+    // Listen Together Sync Bridge
+    val ltRoom by ListenTogetherManager.room.collectAsStateWithLifecycle()
+    val ltIsHost by ListenTogetherManager.isHost.collectAsStateWithLifecycle()
+
+    // Host broadcast to Firestore on playback changes
+    LaunchedEffect(player.song?.videoId, player.isPlaying, ltIsHost, ltRoom?.roomId) {
+        if (ltIsHost && ltRoom?.inRoom == true) {
+            ListenTogetherManager.syncPlaybackState(
+                song = player.song,
+                isPlaying = player.isPlaying,
+                positionMs = controller?.currentPosition ?: 0L,
+            )
+        }
+    }
+
+    // Host periodic position broadcast (every 4 seconds) so guests stay tightly aligned
+    LaunchedEffect(ltIsHost, ltRoom?.roomId, player.isPlaying) {
+        if (ltIsHost && ltRoom?.inRoom == true && player.isPlaying) {
+            while (isActive) {
+                delay(4000L)
+                ListenTogetherManager.syncPlaybackState(
+                    song = player.song,
+                    isPlaying = player.isPlaying,
+                    positionMs = controller?.currentPosition ?: 0L,
+                )
+            }
+        }
+    }
+
+    // Guest receives room state and aligns song, play/pause, and time position
+    LaunchedEffect(ltRoom, ltIsHost) {
+        val currentLt = ltRoom
+        if (!ltIsHost && currentLt?.inRoom == true && currentLt.songId.isNotBlank()) {
+            val ctrl = controller ?: return@LaunchedEffect
+            val currentVideoId = player.song?.videoId
+
+            // Align song if different
+            if (currentVideoId != currentLt.songId) {
+                val syncedSong = Song(
+                    videoId = currentLt.songId,
+                    title = currentLt.songTitle,
+                    artist = currentLt.songArtist,
+                    thumbnailUrl = currentLt.thumbnailUrl.ifBlank { null },
+                )
+                ctrl.playSongs(listOf(syncedSong), 0)
+            }
+
+            // Align play/pause state
+            if (currentLt.isPlaying && !ctrl.isPlaying) {
+                ctrl.play()
+            } else if (!currentLt.isPlaying && ctrl.isPlaying) {
+                ctrl.pause()
+            }
+
+            // Align playback position if drift exceeds 2.5s
+            val elapsed = if (currentLt.isPlaying) {
+                (System.currentTimeMillis() - currentLt.updatedAt).coerceAtLeast(0L)
+            } else 0L
+            val targetPos = currentLt.positionMs + elapsed
+            val currentPos = ctrl.currentPosition
+            val drift = kotlin.math.abs(targetPos - currentPos)
+            if (drift > 2500L) {
+                ctrl.seekTo(targetPos)
+            }
         }
     }
 
@@ -2299,6 +2370,7 @@ private fun VibeWaveApp(
                     refreshing = currentFeed != null && currentFeed in refreshing,
                     pullFraction = { currentPull?.distanceFraction ?: 0f },
                     onCommunityClick = { showCommunitySheet = true },
+                    onListenTogetherClick = { showListenTogetherSheet = true },
                     onBack = when {
                         showDiscord -> ({ showDiscord = false })
                         showHistory -> ({ showHistory = false })
@@ -3067,6 +3139,16 @@ private fun VibeWaveApp(
             BackHandler { showCommunitySheet = false }
             CommunitySheet(
                 onDismiss = { showCommunitySheet = false },
+            )
+        }
+
+        if (showListenTogetherSheet) {
+            BackHandler { showListenTogetherSheet = false }
+            ListenTogetherSheet(
+                onDismiss = { showListenTogetherSheet = false },
+                currentSong = player.song,
+                isPlaying = player.isPlaying,
+                playbackPositionMs = controller?.currentPosition ?: 0L,
             )
         }
 

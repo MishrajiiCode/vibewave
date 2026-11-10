@@ -36,6 +36,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material.icons.rounded.WifiTethering
+import com.music.vibewave.data.firebase.ListenTogetherManager
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -133,6 +135,7 @@ fun FrostedTopBar(
     // the caller would recompose the whole app on each one.
     pullFraction: () -> Float = { 0f },
     onCommunityClick: (() -> Unit)? = null,
+    onListenTogetherClick: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {},
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -250,6 +253,63 @@ fun FrostedTopBar(
                                 Spacer(modifier = Modifier.width(4.5.dp))
                                 Text(
                                     text = "Community",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.5.sp,
+                                    ),
+                                    color = Color.White,
+                                )
+                            }
+                        }
+                    }
+                    if (onListenTogetherClick != null) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        val isRoomActive by ListenTogetherManager.isInRoom.collectAsStateWithLifecycle()
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(
+                                            Color(0xFF00D9FF).copy(alpha = if (isRoomActive) 0.45f else 0.22f),
+                                            Color(0xFF6C63FF).copy(alpha = if (isRoomActive) 0.45f else 0.15f)
+                                        )
+                                    )
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    brush = Brush.linearGradient(
+                                        listOf(
+                                            Color(0xFF00D9FF).copy(alpha = if (isRoomActive) 0.9f else 0.5f),
+                                            Color(0xFF6C63FF).copy(alpha = if (isRoomActive) 0.8f else 0.3f)
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(16.dp),
+                                )
+                                .clickable { onListenTogetherClick() }
+                                .padding(horizontal = 8.dp, vertical = 4.5.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (isRoomActive) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF00FFA3)),
+                                    )
+                                    Spacer(modifier = Modifier.width(4.5.dp))
+                                } else {
+                                    Icon(
+                                        Icons.Rounded.WifiTethering,
+                                        contentDescription = "Listen Together",
+                                        tint = Color(0xFF00D9FF),
+                                        modifier = Modifier.size(13.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
+                                Text(
+                                    text = if (isRoomActive) "Live Sync" else "Together",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.5.sp,

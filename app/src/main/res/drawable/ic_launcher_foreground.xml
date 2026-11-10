@@ -1,0 +1,39 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Center dot / origin point of sound waves -->
+    <path
+        android:fillColor="#6C63FF"
+        android:pathData="M38,54 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0"/>
+
+    <!-- Wave arc 1 (closest) - deep purple -->
+    <path
+        android:strokeColor="#6C63FF"
+        android:strokeWidth="4"
+        android:fillColor="#00000000"
+        android:pathData="M48,46 Q58,54 48,62"/>
+
+    <!-- Wave arc 2 (medium) - mid purple-cyan -->
+    <path
+        android:strokeColor="#9B8FFF"
+        android:strokeWidth="4"
+        android:fillColor="#00000000"
+        android:pathData="M56,38 Q72,54 56,70"/>
+
+    <!-- Wave arc 3 (farthest) - electric cyan -->
+    <path
+        android:strokeColor="#00D9FF"
+        android:strokeWidth="4"
+        android:fillColor="#00000000"
+        android:pathData="M64,30 Q86,54 64,78"/>
+
+    <!-- "V" letter accent for VibeWave branding -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,42 L28,62 L36,42 L32,42 L28,55 L24,42 Z"/>
+
+</vector>
+

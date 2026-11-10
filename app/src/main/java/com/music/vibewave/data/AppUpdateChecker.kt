@@ -103,10 +103,11 @@ object AppUpdateChecker {
             return """
                 ### 🚀 What's New in VibeWave v$version
 
-                - 🏠 **Restored Native High-Performance Home Page**: Full cosmic mesh gradient canvas, fluid Apple Music styling, trending carousels, and instant local playback.
-                - 🎧 **SimpMusic & Echo Music Audio Quality**: Bit-perfect lossless pipeline, maximum dynamic headroom, and calibrated studio equalizer.
-                - 📲 **Seamless In-App Updates**: Download and install future updates directly within VibeWave in one tap without installer errors.
-                - ⚡ **Zero-Latency Playback & Stability**: Instant track switching, background battery optimization, and rock-solid session recovery.
+                - 🎨 **New Custom Brand Icon**: Redesigned modern acoustic sound-wave monogram with electric cyan & deep neon purple gradients (replaces generic store triangles).
+                - 👥 **Listen Together (SimpMusic Sync)**: Real-time collaborative music rooms! Share your 6-digit room code with friends to synchronize track playback, pause, and seek instantly.
+                - 🏠 **Native High-Performance Experience**: Fluid cosmic mesh gradient canvas, fluid Apple Music styling, carousels, and responsive player controls.
+                - 🎧 **SimpMusic & Echo Music Audio Quality**: Lossless bit-perfect pipeline, wide stereo soundstage, dynamic headroom, and calibrated 10-band equalizer.
+                - 📲 **1-Tap Seamless In-App Updates**: Update in-place directly from inside the app with zero installation errors!
             """.trimIndent()
         }
         return rawNotes ?: ""

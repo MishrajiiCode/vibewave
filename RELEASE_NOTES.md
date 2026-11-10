@@ -1,34 +1,44 @@
-# 🚀 VibeWave v2.0.1 — Pure Native Performance, Seamless In-App Updates & Acoustic Fidelity
+# 🚀 VibeWave v2.0.2 — New Brand Icon, Real-Time Listen Together & Studio Audio Quality
 
-Welcome to **VibeWave v2.0.1**! This release brings back the beloved native high-performance Android engine, fluid Home Page experience, Apple Music-style frosted glass UI, SimpMusic & Echo Music audio quality optimizations, and verified in-app update installation.
-
----
-
-### 🏠 Restored Native Home Page & Smooth UI
-- **Original High-Performance Canvas**: Complete restoration of the native Jetpack Compose home screen with dynamic cosmic mesh gradient backdrops, frosted navigation bars, and instant content rendering.
-- **Fluid Carousel & Discover Feeds**: Silky-smooth 60–120 FPS scrolling across trending songs, personalized recommendations, quick picks, and mood playlists.
-- **Apple Music-Style Polish**: Native bottom sheet player with blur sampling, synchronized lyrics, and responsive gesture controls.
+Welcome to **VibeWave v2.0.2**! This major update brings a stunning **new brand icon**, real-time **Listen Together** room synchronization inspired by SimpMusic, studio-grade audio enhancements, and seamless in-app auto-updating.
 
 ---
 
-### 🎧 SimpMusic & Echo Music Audio Quality Upgrades
-- **Bit-Perfect Lossless Stream Processing**: Re-tuned internal audio pipeline dynamic headroom to prevent clipping during high-gain master tracks.
-- **Harmonic Equalizer Curves**: Recalibrated frequency bands for smoother transitions between sub-bass, midrange presence, and high-frequency sparkle.
-- **Spatial Audio Stereo Imaging**: Optimized mid/side channel separation and crossfeed coefficients for a wider, more immersive concert-hall soundstage on both headphones and Bluetooth speakers.
-- **Dynamic Bass Punch Enhancements**: Fine-tuned bass boost algorithms to deliver tight, resonant sub-lows without muddying vocal clarity.
+### 🎨 Brand New Custom VibeWave Icon
+- **Acoustic Monogram**: Completely replaces the previous generic Play Store triangle icon with an original acoustic sound-wave monogram centered around a dynamic "V" and expanding cyan & neon violet waves.
+- **Deep Space Gradient Backdrop**: Features a high-contrast deep cosmic gradient (`#0A0A1F` to `#1A0050`) that pops beautifully across Android launchers, adaptive icons, and themed app drawers.
 
 ---
 
-### 📲 100% Seamless In-App Updates
-- **Native APK Delivery**: Fully compatible with the built-in `AppUpdateChecker`, allowing direct one-tap update downloads and instant system installer handoff directly from within VibeWave.
-- **Signed with Official Production Keystore**: Signed with Raj Mishra's official VibeWave production certificate (`vibewave-release.jks`), allowing seamless direct updates over v1.6.1 without any "App not installed" error.
-- **Version Code 26**: Strictly outranks previous builds for guaranteed Android OS package manager acceptance.
+### 👥 Real-Time "Listen Together" Feature (SimpMusic Engine)
+- **Live Room Synchronization**: Start a room as Host or join friends with a 6-character room code (e.g., `VIBE88`).
+- **Synchronized Playback**: Guests automatically synchronize songs, play/pause state, and track position in real-time with sub-second accuracy.
+- **Direct Top-Bar Access**: Convenient "Together" / "Live Sync" button right in the frosted top bar with a live pulsing indicator when a shared room is active.
+- **Background Playback**: Minimize the sheet or switch apps while the synchronized session keeps playing seamlessly.
+
+---
+
+### 🏠 100% Native High-Performance Experience
+- **Liquid Glass & Cosmic Canvas**: Retains the beloved native Jetpack Compose home screen, dynamic mesh blur, trending carousels, and responsive bottom sheets.
+- **Zero UI Regressions**: Instant startup, 60–120 FPS buttery smooth scrolling, and full access to Library, Explore, and Search.
+
+---
+
+### 🎧 SimpMusic & Echo Music Audio Quality
+- **Lossless Dynamic Headroom**: Bit-perfect audio streaming up to Opus / FLAC quality ceilings.
+- **Calibrated Equalizer**: 10-band precision EQ, bass boost, and widened stereo soundstage for headphones and Bluetooth gear.
+
+---
+
+### 📲 1-Tap Seamless In-App Updates
+- **Automatic In-App Update**: When you open VibeWave, `AppUpdateChecker` detects v2.0.2. Tap "Update Now" and the APK downloads and installs in-place automatically without any "App not installed" error.
+- **Signed with Official Production Keystore**: Matches your existing installation's signature for safe, instant updates without losing playlists, downloads, or history.
 
 ---
 
 ### 📦 APK Downloads
 - **Universal Release APK**: Compatible with all supported Android devices (`armeabi-v7a`, `arm64-v8a`, `x86_64`).
-- **ARM64-v8a Release APK**: Optimized lightweight build for modern 64-bit Android smartphones.
+- **ARM64-v8a Release APK**: Ultra-compact optimized build for modern 64-bit Android devices.
 
 ---
 *Crafted with ❤️ by [Raj Mishra](https://github.com/MishrajiiCode)*
