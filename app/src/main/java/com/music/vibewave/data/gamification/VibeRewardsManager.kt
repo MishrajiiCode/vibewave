@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.music.vibewave.data.firebase.CommunityManager
 import com.music.vibewave.data.firebase.FirestoreManager
 import com.music.vibewave.data.model.Song
 import kotlinx.coroutines.CoroutineScope
@@ -24,8 +25,9 @@ import java.util.UUID
 
 /**
  * Gamification & Engagement Engine for VibeWave.
- * Manages Vibe XP, leveling progression, daily listening streaks,
- * unlockable trophies/badges, and real-time weekly leaderboards.
+ * Deeply integrated with Replay listening stats: minutes played, songs played,
+ * daily streak XP multipliers, level progression, unlockable trophies,
+ * and real-time community leaderboards.
  */
 object VibeRewardsManager {
 
@@ -48,11 +50,33 @@ object VibeRewardsManager {
         VibeBadge("first_note", "First Note", "Play your very first track on VibeWave", "🎵", 50),
         VibeBadge("streak_3", "Spark of Rhythm", "Reach a 3-day listening streak", "✨", 100),
         VibeBadge("streak_7", "Week On Fire", "Listen every day for 7 consecutive days", "🔥", 250),
+        VibeBadge("hour_master", "Hour of Harmony", "Listen to 60 total minutes of music", "⏱️", 75),
         VibeBadge("night_owl", "Night Owl", "Listen to tunes late at night (12 AM - 4 AM)", "🌙", 75),
         VibeBadge("together_vibes", "Better Together", "Join or host a live Listen Together party", "🤝", 100),
         VibeBadge("audiophile", "Pure Acoustic", "Stream high-fidelity music with the equalizer tuned", "🎛️", 100),
         VibeBadge("centurion", "Music Marathoner", "Play over 100 complete songs", "🚀", 500),
+        VibeBadge("acoustic_veteran", "Sound Voyager", "Listen to over 10 hours (600 mins) of tunes", "🌌", 250),
         VibeBadge("dj_master", "Master DJ", "Host a room with friends listening in sync", "👑", 200),
+    )
+
+    data class CelebrationEvent(
+        val type: String, // "BADGE", "TIER", "STREAK"
+        val title: String,
+        val subtitle: String,
+        val iconEmoji: String,
+        val xpBonus: Long,
+        val description: String,
+    )
+
+    data class DailyQuest(
+        val id: String,
+        val title: String,
+        val description: String,
+        val iconEmoji: String,
+        val xpReward: Long,
+        val currentProgress: Int,
+        val targetProgress: Int,
+        val isCompleted: Boolean,
     )
 
     data class RewardProfile(
@@ -68,6 +92,7 @@ object VibeRewardsManager {
         val streakDays: Int = 1,
         val lastStreakDate: String = "",
         val songsPlayedCount: Int = 0,
+        val minutesPlayedCount: Long = 0L,
         val unlockedBadgeIds: Set<String> = emptySet(),
     )
 
@@ -78,6 +103,9 @@ object VibeRewardsManager {
         val weeklyXp: Long,
         val level: Int,
         val levelTitle: String,
+        val streakDays: Int = 1,
+        val songsPlayed: Int = 0,
+        val minutesPlayed: Long = 0L,
         val isCurrentUser: Boolean = false,
     )
 
@@ -93,7 +121,15 @@ object VibeRewardsManager {
     private val _badgeUnlockedEvent = MutableSharedFlow<VibeBadge>(extraBufferCapacity = 1)
     val badgeUnlockedEvent = _badgeUnlockedEvent.asSharedFlow()
 
+    private val _celebrationEvent = MutableSharedFlow<CelebrationEvent>(extraBufferCapacity = 5)
+    val celebrationEvent = _celebrationEvent.asSharedFlow()
+
+    private val _dailyQuests = MutableStateFlow<List<DailyQuest>>(emptyList())
+    val dailyQuests = _dailyQuests.asStateFlow()
+
     private var leaderboardListener: ListenerRegistration? = null
+    private var accumulatedSampleMs: Long = 0L
+    private var dailySongsToday: Int = 0
 
     fun init(context: Context) {
         if (prefs != null) return
@@ -101,6 +137,7 @@ object VibeRewardsManager {
         loadFromLocal()
         checkWeeklyReset()
         checkDailyStreak()
+        refreshDailyQuests()
         startLeaderboardSync()
     }
 
@@ -128,7 +165,9 @@ object VibeRewardsManager {
         val streakDays = p.getInt("streak_days", 1)
         val lastStreakDate = p.getString("last_streak_date", "") ?: ""
         val songsPlayed = p.getInt("songs_played", 0)
+        val minutesPlayed = p.getLong("minutes_played", 0L)
         val badges = p.getStringSet("unlocked_badges", emptySet()) ?: emptySet()
+        dailySongsToday = p.getInt("daily_songs_today", 0)
 
         val uid = FirestoreManager.currentUser.value?.uid?.ifBlank { null }
             ?: p.getString("my_uid", UUID.randomUUID().toString().take(8))!!
@@ -146,6 +185,7 @@ object VibeRewardsManager {
             streakDays = streakDays,
             lastStreakDate = lastStreakDate,
             songsPlayed = songsPlayed,
+            minutesPlayed = minutesPlayed,
             badges = badges,
         )
     }
@@ -160,7 +200,9 @@ object VibeRewardsManager {
             .putInt("streak_days", prof.streakDays)
             .putString("last_streak_date", prof.lastStreakDate)
             .putInt("songs_played", prof.songsPlayedCount)
+            .putLong("minutes_played", prof.minutesPlayedCount)
             .putStringSet("unlocked_badges", prof.unlockedBadgeIds)
+            .putInt("daily_songs_today", dailySongsToday)
             .apply()
     }
 
@@ -222,6 +264,7 @@ object VibeRewardsManager {
         streakDays: Int,
         lastStreakDate: String,
         songsPlayed: Int,
+        minutesPlayed: Long,
         badges: Set<String>,
     ) {
         val (level, title) = calculateLevel(totalXp)
@@ -244,6 +287,7 @@ object VibeRewardsManager {
             streakDays = streakDays,
             lastStreakDate = lastStreakDate,
             songsPlayedCount = songsPlayed,
+            minutesPlayedCount = minutesPlayed,
             unlockedBadgeIds = badges,
         )
     }
@@ -277,6 +321,25 @@ object VibeRewardsManager {
                 )
                 saveToLocal()
                 syncToFirestore()
+
+                if (newStreak in listOf(3, 7, 14, 30)) {
+                    val celebration = CelebrationEvent(
+                        type = "STREAK",
+                        title = "$newStreak-Day Listening Streak!",
+                        subtitle = "Streak Milestone 🔥",
+                        iconEmoji = "🔥",
+                        xpBonus = 100L,
+                        description = "You've listened to music for $newStreak consecutive days. The rhythm never stops!",
+                    )
+                    _celebrationEvent.tryEmit(celebration)
+                    CommunityManager.broadcastAchievement(
+                        badgeTitle = "$newStreak-Day Streak",
+                        badgeEmoji = "🔥",
+                        xpReward = 100L,
+                        streakDays = newStreak,
+                    )
+                }
+
                 if (newStreak >= 3) unlockBadge("streak_3")
                 if (newStreak >= 7) unlockBadge("streak_7")
             }
@@ -287,6 +350,7 @@ object VibeRewardsManager {
                     streakDays = 1,
                     lastStreakDate = today,
                 )
+                dailySongsToday = 0
                 saveToLocal()
                 syncToFirestore()
             }
@@ -309,26 +373,66 @@ object VibeRewardsManager {
             streakDays = current.streakDays,
             lastStreakDate = current.lastStreakDate,
             songsPlayed = current.songsPlayedCount,
+            minutesPlayed = current.minutesPlayedCount,
             badges = current.unlockedBadgeIds,
         )
 
         saveToLocal()
         syncToFirestore()
+        refreshDailyQuests()
 
         val newLevel = _profile.value.level
         if (newLevel > oldLevel) {
-            _levelUpEvent.tryEmit(newLevel to _profile.value.levelTitle)
+            val newTitle = _profile.value.levelTitle
+            _levelUpEvent.tryEmit(newLevel to newTitle)
+
+            val celebration = CelebrationEvent(
+                type = "TIER",
+                title = newTitle,
+                subtitle = "New Tier Unlocked (Level $newLevel)!",
+                iconEmoji = "👑",
+                xpBonus = 150L,
+                description = "You've reached Level $newLevel and ascended to the '$newTitle' rank!",
+            )
+            _celebrationEvent.tryEmit(celebration)
+
+            CommunityManager.broadcastAchievement(
+                badgeTitle = newTitle,
+                badgeEmoji = "👑",
+                xpReward = 150L,
+                isTier = true,
+            )
+        }
+    }
+
+    /**
+     * Called directly by [com.music.vibewave.data.stats.ListeningRecorder] during real playback.
+     * Integrates playback time and full play thresholds into Vibe XP & Leaderboards!
+     */
+    fun onListeningSample(stepMs: Long, countsAsPlay: Boolean, song: Song) {
+        if (stepMs <= 0 && !countsAsPlay) return
+
+        accumulatedSampleMs += stepMs
+        if (accumulatedSampleMs >= 60_000L) {
+            val minutes = accumulatedSampleMs / 60_000L
+            accumulatedSampleMs %= 60_000L
+            val current = _profile.value
+            val newMinutes = current.minutesPlayedCount + minutes
+            _profile.value = current.copy(minutesPlayedCount = newMinutes)
+            addXp(minutes * 5, "$minutes min playback 🎧")
+            saveToLocal()
+
+            if (newMinutes >= 60) unlockBadge("hour_master")
+            if (newMinutes >= 600) unlockBadge("acoustic_veteran")
+        }
+
+        if (countsAsPlay) {
+            onSongCompleted(song)
         }
     }
 
     fun onSongStarted(song: Song) {
-        val prof = _profile.value
-        val newCount = prof.songsPlayedCount + 1
-        _profile.value = prof.copy(songsPlayedCount = newCount)
-        addXp(10, "Song Played: ${song.title}")
-
         unlockBadge("first_note")
-        if (newCount >= 100) unlockBadge("centurion")
 
         // Check Night Owl (between midnight and 4 AM)
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -338,7 +442,15 @@ object VibeRewardsManager {
     }
 
     fun onSongCompleted(song: Song) {
-        addXp(15, "Full Song Completed: ${song.title}")
+        val current = _profile.value
+        val newCount = current.songsPlayedCount + 1
+        dailySongsToday++
+        _profile.value = current.copy(songsPlayedCount = newCount)
+        addXp(15, "Full Track: ${song.title} 🎵")
+        saveToLocal()
+
+        if (newCount >= 100) unlockBadge("centurion")
+        refreshDailyQuests()
     }
 
     fun onListenTogetherJoined() {
@@ -365,8 +477,61 @@ object VibeRewardsManager {
         _profile.value = current.copy(unlockedBadgeIds = updated)
 
         saveToLocal()
-        addXp(badge.xpReward, "Unlocked Achievement: ${badge.title}")
+        addXp(badge.xpReward, "Unlocked Trophy: ${badge.title}")
         _badgeUnlockedEvent.tryEmit(badge)
+
+        val celebration = CelebrationEvent(
+            type = "BADGE",
+            title = badge.title,
+            subtitle = "Trophy Unlocked!",
+            iconEmoji = badge.iconEmoji,
+            xpBonus = badge.xpReward,
+            description = badge.description,
+        )
+        _celebrationEvent.tryEmit(celebration)
+
+        CommunityManager.broadcastAchievement(
+            badgeTitle = badge.title,
+            badgeEmoji = badge.iconEmoji,
+            xpReward = badge.xpReward,
+            isTier = false,
+        )
+    }
+
+    fun refreshDailyQuests() {
+        val list = listOf(
+            DailyQuest(
+                id = "quest_first_track",
+                title = "Daily Tune",
+                description = "Play 1 track to kick off the day",
+                iconEmoji = "🎵",
+                xpReward = 20,
+                currentProgress = dailySongsToday.coerceAtMost(1),
+                targetProgress = 1,
+                isCompleted = dailySongsToday >= 1,
+            ),
+            DailyQuest(
+                id = "quest_triple_tracks",
+                title = "Rhythm Groove",
+                description = "Listen to 3 complete songs",
+                iconEmoji = "🎧",
+                xpReward = 45,
+                currentProgress = dailySongsToday.coerceAtMost(3),
+                targetProgress = 3,
+                isCompleted = dailySongsToday >= 3,
+            ),
+            DailyQuest(
+                id = "quest_flame_keeper",
+                title = "Flame Keeper",
+                description = "Maintain your daily listening streak",
+                iconEmoji = "🔥",
+                xpReward = 50,
+                currentProgress = 1,
+                targetProgress = 1,
+                isCompleted = true,
+            ),
+        )
+        _dailyQuests.value = list
     }
 
     private fun syncToFirestore() {
@@ -386,6 +551,7 @@ object VibeRewardsManager {
                     "levelTitle" to prof.levelTitle,
                     "streakDays" to prof.streakDays,
                     "songsPlayedCount" to prof.songsPlayedCount,
+                    "minutesPlayedCount" to prof.minutesPlayedCount,
                     "unlockedBadgeIds" to prof.unlockedBadgeIds.toList(),
                     "updatedAt" to System.currentTimeMillis(),
                 )
@@ -420,6 +586,9 @@ object VibeRewardsManager {
                         val weeklyXp = doc.getLong("weeklyXp") ?: 0L
                         val level = (doc.getLong("level") ?: 1L).toInt()
                         val title = doc.getString("levelTitle") ?: "Acoustic Novice"
+                        val streakDays = (doc.getLong("streakDays") ?: 1L).toInt()
+                        val songsPlayed = (doc.getLong("songsPlayedCount") ?: 0L).toInt()
+                        val minutesPlayed = doc.getLong("minutesPlayedCount") ?: 0L
 
                         LeaderboardEntry(
                             rank = index + 1,
@@ -428,6 +597,9 @@ object VibeRewardsManager {
                             weeklyXp = weeklyXp,
                             level = level,
                             levelTitle = title,
+                            streakDays = streakDays,
+                            songsPlayed = songsPlayed,
+                            minutesPlayed = minutesPlayed,
                             isCurrentUser = uid == myUid,
                         )
                     }.getOrNull()
@@ -437,4 +609,3 @@ object VibeRewardsManager {
             }
     }
 }
-

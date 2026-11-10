@@ -39,6 +39,11 @@ object CommunityManager {
         val timestamp: Long = System.currentTimeMillis(),
         val likesCount: Int = 0,
         val likedBy: List<String> = emptyList(),
+        val postType: String = "review", // "review", "achievement", "tier", "streak"
+        val badgeEmoji: String? = null,
+        val badgeTitle: String? = null,
+        val cheersCount: Int = 0,
+        val cheeredBy: List<String> = emptyList(),
     ) {
         fun toMap(): Map<String, Any?> = mapOf(
             "id" to id,
@@ -53,6 +58,11 @@ object CommunityManager {
             "timestamp" to timestamp,
             "likesCount" to likesCount,
             "likedBy" to likedBy,
+            "postType" to postType,
+            "badgeEmoji" to badgeEmoji,
+            "badgeTitle" to badgeTitle,
+            "cheersCount" to cheersCount,
+            "cheeredBy" to cheeredBy,
         )
     }
 
@@ -136,6 +146,11 @@ object CommunityManager {
                             timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis(),
                             likesCount = (doc.getLong("likesCount") ?: 0L).toInt(),
                             likedBy = (doc.get("likedBy") as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                            postType = doc.getString("postType") ?: "review",
+                            badgeEmoji = doc.getString("badgeEmoji"),
+                            badgeTitle = doc.getString("badgeTitle"),
+                            cheersCount = (doc.getLong("cheersCount") ?: 0L).toInt(),
+                            cheeredBy = (doc.get("cheeredBy") as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                         )
                     }.getOrNull()
                 } ?: emptyList()
@@ -207,6 +222,71 @@ object CommunityManager {
                 db.collection(POSTS_COLLECTION).document(postId).delete().await()
             } catch (t: Throwable) {
                 Log.e(TAG, "Failed to delete post", t)
+            }
+        }
+    }
+
+    fun broadcastAchievement(
+        badgeTitle: String,
+        badgeEmoji: String,
+        xpReward: Long,
+        isTier: Boolean = false,
+        streakDays: Int = 0,
+    ) {
+        scope.launch {
+            try {
+                val db = FirestoreManager.getFirestoreOrNull() ?: return@launch
+                val user = FirestoreManager.currentUser.value
+                val userName = user?.name?.takeIf { it.isNotBlank() } ?: "VibeWave Listener"
+                val userId = user?.uid ?: "guest"
+
+                val content = when {
+                    isTier -> "🌟 Ascended to a brand new listening tier: $badgeTitle! Keep rising to the top."
+                    streakDays > 0 -> "🔥 Maintained an unstoppable $streakDays-Day Listening Streak! Staying in rhythm."
+                    else -> "🏆 Just unlocked the '$badgeTitle' Trophy and earned +$xpReward Vibe XP!"
+                }
+
+                val post = CommunityPost(
+                    id = UUID.randomUUID().toString(),
+                    userId = userId,
+                    userName = userName,
+                    userEmail = user?.email ?: "",
+                    content = content,
+                    postType = if (isTier) "tier" else if (streakDays > 0) "streak" else "achievement",
+                    badgeEmoji = badgeEmoji,
+                    badgeTitle = badgeTitle,
+                    timestamp = System.currentTimeMillis(),
+                )
+                db.collection(POSTS_COLLECTION).document(post.id).set(post.toMap()).await()
+                Log.d(TAG, "Achievement broadcasted to community feed: ${post.id}")
+            } catch (t: Throwable) {
+                Log.e(TAG, "Failed to broadcast achievement", t)
+            }
+        }
+    }
+
+    fun cheerPost(postId: String, onCheered: (() -> Unit)? = null) {
+        val myUid = FirestoreManager.currentUser.value?.uid ?: "guest_${System.currentTimeMillis()}"
+        scope.launch {
+            try {
+                val db = FirestoreManager.getFirestoreOrNull() ?: return@launch
+                val docRef = db.collection(POSTS_COLLECTION).document(postId)
+                val snapshot = docRef.get().await()
+                if (snapshot.exists()) {
+                    val currentCheered = (snapshot.get("cheeredBy") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+                    if (!currentCheered.contains(myUid)) {
+                        val updated = currentCheered + myUid
+                        docRef.update(
+                            mapOf(
+                                "cheersCount" to updated.size,
+                                "cheeredBy" to updated,
+                            ),
+                        ).await()
+                        onCheered?.invoke()
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Failed to cheer post", t)
             }
         }
     }

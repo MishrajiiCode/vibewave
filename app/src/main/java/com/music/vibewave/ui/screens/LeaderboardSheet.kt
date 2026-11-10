@@ -228,9 +228,14 @@ private fun UserLevelBanner(profile: VibeRewardsManager.RewardProfile) {
                             color = Color.White,
                         )
                         Text(
-                            text = "${profile.totalXp} Total XP • ${profile.weeklyXp} this week",
+                            text = "${profile.weeklyXp} XP this week • ${profile.totalXp} Total",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF8E92BC),
+                        )
+                        Text(
+                            text = "🎧 ${profile.minutesPlayedCount} mins • 🎵 ${profile.songsPlayedCount} songs",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = Color(0xFF00CEC9),
                         )
                     }
                 }
@@ -437,10 +442,18 @@ private fun PodiumPillar(
 
             Text(
                 text = "${entry.weeklyXp} XP",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
                 color = color,
                 textAlign = TextAlign.Center,
             )
+            if (entry.minutesPlayed > 0) {
+                Text(
+                    text = "🎧 ${entry.minutesPlayed}m",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                    color = Color(0xFF00CEC9),
+                    textAlign = TextAlign.Center,
+                )
+            }
         } else {
             Spacer(modifier = Modifier.height(60.dp))
         }
@@ -539,6 +552,11 @@ private fun LeaderboardRow(
                         text = "Lv.${entry.level} • ${entry.levelTitle}",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFF8E92BC),
+                    )
+                    Text(
+                        text = "🎧 ${entry.minutesPlayed}m • 🎵 ${entry.songsPlayed} • 🔥 ${entry.streakDays}d",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                        color = Color(0xFF00CEC9),
                     )
                 }
             }

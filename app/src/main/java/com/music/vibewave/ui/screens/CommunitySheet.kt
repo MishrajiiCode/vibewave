@@ -2,6 +2,7 @@ package com.music.vibewave.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,8 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -26,13 +27,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
-import androidx.compose.material.icons.rounded.ChatBubble
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Forum
-import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Search
@@ -41,6 +43,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -52,7 +55,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,13 +62,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.vibewave.data.firebase.CommunityManager
 import com.music.vibewave.data.firebase.FirestoreManager
-import kotlinx.coroutines.launch
+import com.music.vibewave.data.gamification.VibeRewardsManager
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -79,8 +82,11 @@ fun CommunitySheet(
     val posts by CommunityManager.posts.collectAsStateWithLifecycle()
     val communityUsers by CommunityManager.communityUsers.collectAsStateWithLifecycle()
     val currentUser by FirestoreManager.currentUser.collectAsStateWithLifecycle()
+    val profile by VibeRewardsManager.profile.collectAsStateWithLifecycle()
+    val dailyQuests by VibeRewardsManager.dailyQuests.collectAsStateWithLifecycle()
+    val leaderboard by VibeRewardsManager.leaderboard.collectAsStateWithLifecycle()
 
-    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Feed, 1 = Direct Messages
+    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Pulse/Feed, 1 = Leaderboard, 2 = DMs
     var activeChatUser by remember { mutableStateOf<FirestoreManager.UserProfile?>(null) }
 
     LaunchedEffect(Unit) {
@@ -92,12 +98,12 @@ fun CommunitySheet(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding(),
-        color = Color(0xFF0F1018),
+        color = Color(0xFF0D0E16),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header Bar
             Surface(
-                color = Color(0xFF161826),
+                color = Color(0xFF141624),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(
@@ -110,29 +116,33 @@ fun CommunitySheet(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             shape = CircleShape,
-                            color = Color(0xFF6C5CE7).copy(alpha = 0.2f),
-                            modifier = Modifier.size(38.dp),
+                            color = Color(0xFF6C5CE7).copy(alpha = 0.25f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF6C5CE7).copy(alpha = 0.6f)),
+                            modifier = Modifier.size(40.dp),
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    Icons.Rounded.Forum,
+                                    Icons.Rounded.AutoAwesome,
                                     contentDescription = null,
-                                    tint = Color(0xFF81ECEC),
+                                    tint = Color(0xFF00CEC9),
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "VibeWave Community",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                text = "Engagement Center",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = (-0.3).sp,
+                                ),
                                 color = Color.White,
                             )
                             Text(
-                                text = "Live Reviews & WhatsApp-Style Chat",
+                                text = "Live Pulse, Community Unlocks & Leaderboards",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF81ECEC).copy(alpha = 0.8f),
+                                color = Color(0xFF81ECEC).copy(alpha = 0.85f),
                             )
                         }
                     }
@@ -143,36 +153,43 @@ fun CommunitySheet(
                 }
             }
 
-            // Top Tab Navigation (Feed vs Direct Messages)
+            // Interactive Engagement Banner
+            EngagementStatsBanner(profile = profile)
+
+            // Daily Quests Bar
+            DailyQuestsSection(quests = dailyQuests)
+
+            // Top Tab Navigation (3 Tabs)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val tabs = listOf("🌐 Community Feed & Reviews", "💬 Direct Messages (1-on-1)")
+                val tabs = listOf("🌟 Live Pulse", "🏆 Leaderboard", "💬 Viber Chat")
                 tabs.forEachIndexed { index, title ->
                     val isSelected = selectedTab == index
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = if (isSelected) Color(0xFF6C5CE7) else Color(0xFF1F2233),
+                        color = if (isSelected) Color(0xFF6C5CE7) else Color(0xFF1E2133),
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
                                 selectedTab = index
-                                if (index == 0) activeChatUser = null
+                                if (index != 2) activeChatUser = null
                             },
                     ) {
                         Text(
                             text = title,
                             style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 12.sp,
                             ),
                             color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
                             modifier = Modifier
-                                .padding(vertical = 10.dp)
+                                .padding(vertical = 9.dp)
                                 .fillMaxWidth(),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            textAlign = TextAlign.Center,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -182,25 +199,228 @@ fun CommunitySheet(
 
             // Content Body
             Box(modifier = Modifier.weight(1f)) {
-                if (selectedTab == 0) {
-                    CommunityFeedView(
-                        posts = posts,
-                        currentUserId = currentUser?.uid ?: "",
-                    )
-                } else {
-                    if (activeChatUser == null) {
-                        CommunityUsersListView(
-                            users = communityUsers,
-                            onUserClick = { targetUser ->
-                                activeChatUser = targetUser
-                                CommunityManager.openConversation(targetUser.uid)
-                            },
-                        )
-                    } else {
-                        PrivateChatThreadView(
-                            otherUser = activeChatUser!!,
+                when (selectedTab) {
+                    0 -> {
+                        EngagementFeedView(
+                            posts = posts,
                             currentUserId = currentUser?.uid ?: "",
-                            onBack = { activeChatUser = null },
+                        )
+                    }
+                    1 -> {
+                        EngagementLeaderboardView(
+                            leaderboard = leaderboard,
+                            myUid = profile.uid,
+                        )
+                    }
+                    2 -> {
+                        if (activeChatUser == null) {
+                            CommunityUsersListView(
+                                users = communityUsers,
+                                onUserClick = { targetUser ->
+                                    activeChatUser = targetUser
+                                    CommunityManager.openConversation(targetUser.uid)
+                                },
+                            )
+                        } else {
+                            PrivateChatThreadView(
+                                otherUser = activeChatUser!!,
+                                currentUserId = currentUser?.uid ?: "",
+                                onBack = { activeChatUser = null },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EngagementStatsBanner(profile: VibeRewardsManager.RewardProfile) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFF151829),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            Brush.horizontalGradient(listOf(Color(0xFF6C5CE7).copy(alpha = 0.6f), Color(0xFFFFB300).copy(alpha = 0.6f)))
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF6C5CE7),
+                        modifier = Modifier.size(34.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "Lv.${profile.level}",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+                                color = Color.White,
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = profile.levelTitle,
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                        )
+                        Text(
+                            text = "🎧 ${profile.minutesPlayedCount} mins • 🎵 ${profile.songsPlayedCount} tracks",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF00CEC9),
+                        )
+                    }
+                }
+
+                // Daily Streak Pill
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFF4757).copy(alpha = 0.15f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF4757).copy(alpha = 0.6f)),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Rounded.LocalFireDepartment,
+                            contentDescription = null,
+                            tint = Color(0xFFFF4757),
+                            modifier = Modifier.size(15.dp),
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "${profile.streakDays}d Streak",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
+                            color = Color(0xFFFFD32A),
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Progress to next tier
+            LinearProgressIndicator(
+                progress = { profile.currentLevelProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                color = Color(0xFFFFB300),
+                trackColor = Color(0xFF25293E),
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "${(profile.currentLevelProgress * 100).toInt()}% towards next Tier",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                    color = Color(0xFF8E92BC),
+                )
+                Text(
+                    text = "${profile.weeklyXp} Weekly XP",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, fontWeight = FontWeight.Bold),
+                    color = Color(0xFFFFB300),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DailyQuestsSection(quests: List<VibeRewardsManager.DailyQuest>) {
+    if (quests.isEmpty()) return
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "🎯 DAILY MISSIONS",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                color = Color(0xFF8E92BC),
+            )
+            Text(
+                text = "+XP for active vibing",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                color = Color(0xFF00CEC9),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            items(quests, key = { it.id }) { quest ->
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (quest.isCompleted) Color(0xFF142426) else Color(0xFF171A2B),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (quest.isCompleted) Color(0xFF00CEC9).copy(alpha = 0.5f) else Color(0xFF262A40)
+                    ),
+                    modifier = Modifier.width(170.dp),
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(text = quest.iconEmoji, fontSize = 16.sp)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (quest.isCompleted) Color(0xFF00CEC9).copy(alpha = 0.2f) else Color(0xFFFFB300).copy(alpha = 0.15f),
+                            ) {
+                                Text(
+                                    text = if (quest.isCompleted) "CLAIMED" else "+${quest.xpReward} XP",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.sp,
+                                    ),
+                                    color = if (quest.isCompleted) Color(0xFF00CEC9) else Color(0xFFFFB300),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = quest.title,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = quest.description,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = Color(0xFF8E92BC),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -210,7 +430,7 @@ fun CommunitySheet(
 }
 
 @Composable
-private fun CommunityFeedView(
+private fun EngagementFeedView(
     posts: List<CommunityManager.CommunityPost>,
     currentUserId: String,
 ) {
@@ -224,7 +444,7 @@ private fun CommunityFeedView(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             // Compose Review Card
@@ -237,7 +457,7 @@ private fun CommunityFeedView(
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text(
-                        text = "Share Music Review or Thought",
+                        text = "Share Music Review or Flex Your Vibe",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = Color.White,
                     )
@@ -249,7 +469,7 @@ private fun CommunityFeedView(
                         placeholder = { Text("What are you listening to? Write your review or thoughts...") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(100.dp),
+                            .height(88.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF6C5CE7),
                             unfocusedBorderColor = Color(0xFF2E3248),
@@ -260,7 +480,7 @@ private fun CommunityFeedView(
                         ),
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -298,9 +518,8 @@ private fun CommunityFeedView(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    // Star Rating Row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -320,7 +539,7 @@ private fun CommunityFeedView(
                                     contentDescription = null,
                                     tint = if (isFilled) Color(0xFFFFD166) else Color(0xFF383B52),
                                     modifier = Modifier
-                                        .size(22.dp)
+                                        .size(20.dp)
                                         .clickable { newPostRating = star },
                                 )
                             }
@@ -336,6 +555,7 @@ private fun CommunityFeedView(
                                         songArtist = newPostArtist,
                                         rating = newPostRating,
                                     )
+                                    VibeRewardsManager.addXp(20, "Shared Community Review 💬")
                                     newPostContent = ""
                                     newPostSongTitle = ""
                                     newPostArtist = ""
@@ -362,20 +582,33 @@ private fun CommunityFeedView(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No community posts yet. Be the first to share a review!",
+                        text = "No community activity yet. Listen to songs and unlock trophies to start the pulse!",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.5f),
+                        textAlign = TextAlign.Center,
                     )
                 }
             }
         } else {
             items(posts, key = { it.id }) { post ->
-                CommunityPostCard(
-                    post = post,
-                    isMyPost = post.userId == currentUserId,
-                    onLikeClick = { CommunityManager.likePost(post.id) },
-                    onDeleteClick = { CommunityManager.deletePost(post.id) },
-                )
+                if (post.postType in listOf("achievement", "tier", "streak")) {
+                    AchievementBroadcastCard(
+                        post = post,
+                        currentUserId = currentUserId,
+                        onCheerClick = {
+                            CommunityManager.cheerPost(post.id) {
+                                VibeRewardsManager.addXp(5, "Cheered ${post.userName} 👏")
+                            }
+                        },
+                    )
+                } else {
+                    CommunityReviewCard(
+                        post = post,
+                        isMyPost = post.userId == currentUserId,
+                        onLikeClick = { CommunityManager.likePost(post.id) },
+                        onDeleteClick = { CommunityManager.deletePost(post.id) },
+                    )
+                }
             }
         }
 
@@ -386,7 +619,127 @@ private fun CommunityFeedView(
 }
 
 @Composable
-private fun CommunityPostCard(
+private fun AchievementBroadcastCard(
+    post: CommunityManager.CommunityPost,
+    currentUserId: String,
+    onCheerClick: () -> Unit,
+) {
+    val isCheered = remember(post.cheeredBy, currentUserId) {
+        post.cheeredBy.contains(currentUserId)
+    }
+    val timeAgo = remember(post.timestamp) {
+        val diff = System.currentTimeMillis() - post.timestamp
+        when {
+            diff < 60_000 -> "Just now"
+            diff < 3600_000 -> "${diff / 60_000}m ago"
+            diff < 86400_000 -> "${diff / 3600_000}h ago"
+            else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(post.timestamp))
+        }
+    }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFF141728),
+        border = androidx.compose.foundation.BorderStroke(
+            1.5.dp,
+            Brush.linearGradient(
+                listOf(
+                    Color(0xFFFFD700).copy(alpha = 0.8f),
+                    Color(0xFFFF7675).copy(alpha = 0.7f),
+                    Color(0xFF6C5CE7).copy(alpha = 0.8f),
+                )
+            ),
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFFB300).copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(text = post.badgeEmoji ?: "🏆", fontSize = 20.sp)
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = post.userName,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                        )
+                        Text(
+                            text = when (post.postType) {
+                                "tier" -> "🌟 Tier Ascension • $timeAgo"
+                                "streak" -> "🔥 Streak Fire • $timeAgo"
+                                else -> "🏆 Trophy Unlocked • $timeAgo"
+                            },
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                            color = Color(0xFFFFD700),
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = post.content,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = Color.White,
+                lineHeight = 20.sp,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Congratulate button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "${post.cheersCount} vibers congratulated",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF8E92BC),
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isCheered) Color(0xFF00CEC9).copy(alpha = 0.25f) else Color(0xFF6C5CE7).copy(alpha = 0.25f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (isCheered) Color(0xFF00CEC9) else Color(0xFF6C5CE7),
+                    ),
+                    modifier = Modifier.clickable(enabled = !isCheered) { onCheerClick() },
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = if (isCheered) "🎉 Cheered!" else "👏 Congratulate (+5 XP)",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = if (isCheered) Color(0xFF00CEC9) else Color.White,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommunityReviewCard(
     post: CommunityManager.CommunityPost,
     isMyPost: Boolean,
     onLikeClick: () -> Unit,
@@ -457,7 +810,6 @@ private fun CommunityPostCard(
                 }
             }
 
-            // Song pill if attached
             if (!post.songTitle.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Surface(
@@ -489,7 +841,6 @@ private fun CommunityPostCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Body text
             Text(
                 text = post.content,
                 style = MaterialTheme.typography.bodyMedium,
@@ -499,7 +850,6 @@ private fun CommunityPostCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Footer (Like count + actions)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -519,20 +869,293 @@ private fun CommunityPostCard(
                     Text(
                         text = "${post.likesCount} likes",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = Color.White.copy(alpha = 0.7f),
                     )
                 }
 
                 if (isMyPost) {
-                    IconButton(onClick = onDeleteClick, modifier = Modifier.size(24.dp)) {
+                    IconButton(
+                        onClick = onDeleteClick,
+                        modifier = Modifier.size(28.dp),
+                    ) {
                         Icon(
                             Icons.Rounded.DeleteOutline,
                             contentDescription = "Delete",
-                            tint = Color(0xFFFF7675).copy(alpha = 0.7f),
+                            tint = Color(0xFFFF7675).copy(alpha = 0.8f),
                             modifier = Modifier.size(18.dp),
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EngagementLeaderboardView(
+    leaderboard: List<VibeRewardsManager.LeaderboardEntry>,
+    myUid: String,
+) {
+    if (leaderboard.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Weekly Leaderboard Reset",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Play songs and maintain your streak to top the podium!",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF8E92BC),
+                )
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            item {
+                PodiumSection(topEntries = leaderboard.take(3))
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "ALL LISTENERS",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                    color = Color(0xFF8E92BC),
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
+            }
+
+            items(leaderboard, key = { it.uid }) { entry ->
+                LeaderboardRow(entry = entry, isMe = entry.uid == myUid)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PodiumSection(topEntries: List<VibeRewardsManager.LeaderboardEntry>) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFF141726),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF24283E)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            // #2 Silver
+            val second = topEntries.getOrNull(1)
+            PodiumPillar(
+                rank = 2,
+                entry = second,
+                color = Color(0xFFBDC3C7),
+                pillarHeight = 70.dp,
+            )
+
+            // #1 Gold
+            val first = topEntries.getOrNull(0)
+            PodiumPillar(
+                rank = 1,
+                entry = first,
+                color = Color(0xFFFFD700),
+                pillarHeight = 90.dp,
+            )
+
+            // #3 Bronze
+            val third = topEntries.getOrNull(2)
+            PodiumPillar(
+                rank = 3,
+                entry = third,
+                color = Color(0xFFCD7F32),
+                pillarHeight = 55.dp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PodiumPillar(
+    rank: Int,
+    entry: VibeRewardsManager.LeaderboardEntry?,
+    color: Color,
+    pillarHeight: androidx.compose.ui.unit.Dp,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(90.dp),
+    ) {
+        if (entry != null) {
+            Surface(
+                shape = CircleShape,
+                color = color.copy(alpha = 0.2f),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, color),
+                modifier = Modifier.size(46.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = entry.displayName.take(1).uppercase(),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = entry.displayName,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+
+            Text(
+                text = "${entry.weeklyXp} XP",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                color = color,
+                textAlign = TextAlign.Center,
+            )
+            if (entry.minutesPlayed > 0) {
+                Text(
+                    text = "🎧 ${entry.minutesPlayed}m",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                    color = Color(0xFF00CEC9),
+                    textAlign = TextAlign.Center,
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.height(60.dp))
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Surface(
+            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
+            color = color.copy(alpha = 0.15f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.4f)),
+            modifier = Modifier
+                .width(70.dp)
+                .height(pillarHeight),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = when (rank) {
+                        1 -> "🥇 1st"
+                        2 -> "🥈 2nd"
+                        else -> "🥉 3rd"
+                    },
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = color,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LeaderboardRow(
+    entry: VibeRewardsManager.LeaderboardEntry,
+    isMe: Boolean,
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (isMe) Color(0xFF1B1E33) else Color(0xFF131522),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (isMe) Color(0xFF00D9FF).copy(alpha = 0.6f) else Color(0xFF22263C),
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "#${entry.rank}",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = when (entry.rank) {
+                        1 -> Color(0xFFFFD700)
+                        2 -> Color(0xFFBDC3C7)
+                        3 -> Color(0xFFCD7F32)
+                        else -> Color(0xFF8E92BC)
+                    },
+                    modifier = Modifier.width(32.dp),
+                )
+
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFF6C63FF).copy(alpha = 0.2f),
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = entry.displayName.take(1).uppercase(),
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFF9B8FFF),
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = entry.displayName,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                        )
+                        if (isMe) {
+                            Text(
+                                text = " (You)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF00D9FF),
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Lv.${entry.level} • ${entry.levelTitle}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF8E92BC),
+                    )
+                    Text(
+                        text = "🎧 ${entry.minutesPlayed}m • 🎵 ${entry.songsPlayed} • 🔥 ${entry.streakDays}d",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                        color = Color(0xFF00CEC9),
+                    )
+                }
+            }
+
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFFFFB300).copy(alpha = 0.15f),
+            ) {
+                Text(
+                    text = "${entry.weeklyXp} XP",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = Color(0xFFFFB300),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
             }
         }
     }
@@ -545,124 +1168,89 @@ private fun CommunityUsersListView(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val filtered = remember(users, searchQuery) {
-        if (searchQuery.isBlank()) users else users.filter {
-            it.name.contains(searchQuery, ignoreCase = true) || it.email.contains(searchQuery, ignoreCase = true)
-        }
+        if (searchQuery.isBlank()) users
+        else users.filter { it.name.contains(searchQuery, ignoreCase = true) || it.email.contains(searchQuery, ignoreCase = true) }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .padding(16.dp),
     ) {
-        // Search user
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("Search users to message...") },
+            placeholder = { Text("Search vibers to message...") },
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.5f)) },
             singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color(0xFF6C5CE7),
                 unfocusedBorderColor = Color(0xFF2E3248),
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                focusedPlaceholderColor = Color.White.copy(alpha = 0.4f),
-                unfocusedPlaceholderColor = Color.White.copy(alpha = 0.4f),
             ),
-            shape = RoundedCornerShape(14.dp),
         )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (filtered.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 40.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "No other listeners found. Invite a friend!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.5f),
-                        )
-                    }
-                }
-            } else {
+        Spacer(modifier = Modifier.height(14.dp))
+
+        if (filtered.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("No users found", color = Color.White.copy(alpha = 0.5f))
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 items(filtered, key = { it.uid }) { user ->
                     Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFF1C1E2E),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF1B1D2C),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onUserClick(user) },
                     ) {
                         Row(
-                            modifier = Modifier.padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = Color(0xFF00CEC9).copy(alpha = 0.25f),
-                                    modifier = Modifier.size(42.dp),
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = user.name.take(1).uppercase(),
-                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = Color(0xFF00CEC9),
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFF00CEC9).copy(alpha = 0.25f),
+                                modifier = Modifier.size(42.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
                                     Text(
-                                        text = user.name,
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White,
-                                    )
-                                    Text(
-                                        text = user.email.takeIf { it.isNotBlank() } ?: "VibeWave User",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White.copy(alpha = 0.5f),
+                                        text = user.name.take(1).uppercase(),
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color(0xFF00CEC9),
                                     )
                                 }
                             }
-
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFF6C5CE7).copy(alpha = 0.2f),
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.ChatBubble,
-                                        contentDescription = null,
-                                        tint = Color(0xFF6C5CE7),
-                                        modifier = Modifier.size(14.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Chat", style = MaterialTheme.typography.labelSmall, color = Color(0xFF6C5CE7))
-                                }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = user.name,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = Color.White,
+                                )
+                                Text(
+                                    text = "Tap to chat in real-time",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF81ECEC).copy(alpha = 0.7f),
+                                )
                             }
                         }
                     }
                 }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }
@@ -675,9 +1263,8 @@ private fun PrivateChatThreadView(
     onBack: () -> Unit,
 ) {
     val messages by CommunityManager.currentConversation.collectAsStateWithLifecycle()
-    var typedText by remember { mutableStateOf("") }
+    var messageText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -685,36 +1272,31 @@ private fun PrivateChatThreadView(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .imePadding(),
-    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
         // Chat Header
         Surface(
-            color = Color(0xFF181A28),
+            color = Color(0xFF1A1D2E),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
-                Spacer(modifier = Modifier.width(4.dp))
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFF6C5CE7).copy(alpha = 0.3f),
+                    color = Color(0xFF00CEC9).copy(alpha = 0.25f),
                     modifier = Modifier.size(36.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             text = otherUser.name.take(1).uppercase(),
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF81ECEC),
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFF00CEC9),
                         )
                     }
                 }
@@ -722,104 +1304,61 @@ private fun PrivateChatThreadView(
                 Column {
                     Text(
                         text = otherUser.name,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         color = Color.White,
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color(0xFF00CEC9), modifier = Modifier.size(10.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Private 1-on-1 Chat",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = Color(0xFF81ECEC),
-                        )
-                    }
+                    Text(
+                        text = "Encrypted Private Chat",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF00FFA3),
+                    )
                 }
             }
         }
 
-        // Messages List
+        // Messages list
         LazyColumn(
             state = listState,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (messages.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 50.dp),
-                        contentAlignment = Alignment.Center,
+            items(messages, key = { it.id }) { msg ->
+                val isMe = msg.senderId == currentUserId
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(
+                            topStart = 16.dp,
+                            topEnd = 16.dp,
+                            bottomStart = if (isMe) 16.dp else 4.dp,
+                            bottomEnd = if (isMe) 4.dp else 16.dp,
+                        ),
+                        color = if (isMe) Color(0xFF6C5CE7) else Color(0xFF202336),
+                        modifier = Modifier.padding(horizontal = 4.dp),
                     ) {
-                        Text(
-                            text = "No messages yet. Say hi to ${otherUser.name}! 👋",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.5f),
-                        )
-                    }
-                }
-            } else {
-                items(messages, key = { it.id }) { msg ->
-                    val isMe = msg.senderId == currentUserId
-                    val timeStr = remember(msg.timestamp) {
-                        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp))
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(
-                                topStart = 14.dp,
-                                topEnd = 14.dp,
-                                bottomStart = if (isMe) 14.dp else 2.dp,
-                                bottomEnd = if (isMe) 2.dp else 14.dp,
-                            ),
-                            color = if (isMe) Color(0xFF6C5CE7) else Color(0xFF222538),
-                            modifier = Modifier.widthIn(max = 280.dp),
-                        ) {
-                            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                                Text(
-                                    text = msg.message,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White,
-                                )
-                                Spacer(modifier = Modifier.height(3.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.End,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.align(Alignment.End),
-                                ) {
-                                    Text(
-                                        text = timeStr,
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                        color = Color.White.copy(alpha = 0.6f),
-                                    )
-                                    if (isMe) {
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                        Text(
-                                            text = "✓✓",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                            color = Color(0xFF81ECEC),
-                                        )
-                                    }
-                                }
-                            }
+                        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                            Text(
+                                text = msg.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White,
+                            )
                         }
                     }
                 }
             }
         }
 
-        // Bottom Input Bar
+        // Message Input
         Surface(
             color = Color(0xFF161826),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding(),
         ) {
             Row(
                 modifier = Modifier
@@ -828,49 +1367,37 @@ private fun PrivateChatThreadView(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedTextField(
-                    value = typedText,
-                    onValueChange = { typedText = it },
+                    value = messageText,
+                    onValueChange = { messageText = it },
                     placeholder = { Text("Type a message...") },
                     modifier = Modifier.weight(1f),
-                    singleLine = false,
-                    maxLines = 4,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF6C5CE7),
                         unfocusedBorderColor = Color(0xFF2E3248),
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
-                        focusedPlaceholderColor = Color.White.copy(alpha = 0.4f),
-                        unfocusedPlaceholderColor = Color.White.copy(alpha = 0.4f),
                     ),
-                    shape = RoundedCornerShape(22.dp),
+                    maxLines = 3,
                 )
-
                 Spacer(modifier = Modifier.width(8.dp))
-
                 IconButton(
                     onClick = {
-                        if (typedText.isNotBlank()) {
-                            val textToSend = typedText
-                            typedText = ""
+                        if (messageText.isNotBlank()) {
                             CommunityManager.sendPrivateMessage(
                                 receiverId = otherUser.uid,
                                 receiverName = otherUser.name,
                                 receiverEmail = otherUser.email,
-                                messageText = textToSend,
+                                messageText = messageText,
                             )
+                            messageText = ""
                         }
                     },
-                    enabled = typedText.isNotBlank(),
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(if (typedText.isNotBlank()) Color(0xFF6C5CE7) else Color(0xFF272A3C)),
+                    enabled = messageText.isNotBlank(),
                 ) {
                     Icon(
                         Icons.AutoMirrored.Rounded.Send,
                         contentDescription = "Send",
-                        tint = if (typedText.isNotBlank()) Color.White else Color.White.copy(alpha = 0.4f),
-                        modifier = Modifier.size(20.dp),
+                        tint = if (messageText.isNotBlank()) Color(0xFF00CEC9) else Color.White.copy(alpha = 0.3f),
                     )
                 }
             }

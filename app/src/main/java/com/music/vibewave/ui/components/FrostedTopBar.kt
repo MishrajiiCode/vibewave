@@ -204,27 +204,71 @@ fun FrostedTopBar(
                 Row(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .padding(start = 16.dp),
+                        .padding(start = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // App Logo Icon
                     Image(
                         painter = painterResource(R.drawable.ic_logo),
                         contentDescription = "VibeWave",
                         modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(6.dp)),
+                            .size(26.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { onLeaderboardClick?.invoke() },
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "VibeWave",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = (-0.3).sp,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+
+                    // 1. Daily Streak Pill (Directly replaces "VibeWave" text)
+                    if (onLeaderboardClick != null) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        val rewardProfile by VibeRewardsManager.profile.collectAsStateWithLifecycle()
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(
+                                            Color(0xFFFF4757).copy(alpha = 0.35f),
+                                            Color(0xFFFFA502).copy(alpha = 0.25f),
+                                        )
+                                    )
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    brush = Brush.linearGradient(
+                                        listOf(
+                                            Color(0xFFFF4757).copy(alpha = 0.85f),
+                                            Color(0xFFFFD32A).copy(alpha = 0.85f),
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(16.dp),
+                                )
+                                .clickable { onLeaderboardClick() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.LocalFireDepartment,
+                                    contentDescription = "Daily Streak",
+                                    tint = Color(0xFFFF4757),
+                                    modifier = Modifier.size(15.dp),
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "${rewardProfile.streakDays}",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 12.sp,
+                                    ),
+                                    color = Color(0xFFFFD32A),
+                                )
+                            }
+                        }
+                    }
+
+                    // 2. Engagement Center / Hub Pill
                     if (onCommunityClick != null) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
@@ -241,7 +285,7 @@ fun FrostedTopBar(
                                     shape = RoundedCornerShape(16.dp),
                                 )
                                 .clickable { onCommunityClick() }
-                                .padding(horizontal = 9.dp, vertical = 4.5.dp),
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Row(
@@ -249,13 +293,13 @@ fun FrostedTopBar(
                             ) {
                                 Icon(
                                     Icons.Rounded.Forum,
-                                    contentDescription = "Community",
+                                    contentDescription = "Engagement Hub",
                                     tint = Color(0xFF81ECEC),
-                                    modifier = Modifier.size(14.dp),
+                                    modifier = Modifier.size(13.5.dp),
                                 )
-                                Spacer(modifier = Modifier.width(4.5.dp))
+                                Spacer(modifier = Modifier.width(3.5.dp))
                                 Text(
-                                    text = "Community",
+                                    text = "Hub",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.5.sp,
@@ -265,6 +309,8 @@ fun FrostedTopBar(
                             }
                         }
                     }
+
+                    // 3. Listen Together Pill
                     if (onListenTogetherClick != null) {
                         Spacer(modifier = Modifier.width(6.dp))
                         val isRoomActive by ListenTogetherManager.isInRoom.collectAsStateWithLifecycle()
@@ -290,7 +336,7 @@ fun FrostedTopBar(
                                     shape = RoundedCornerShape(16.dp),
                                 )
                                 .clickable { onListenTogetherClick() }
-                                .padding(horizontal = 8.dp, vertical = 4.5.dp),
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -301,7 +347,7 @@ fun FrostedTopBar(
                                             .clip(CircleShape)
                                             .background(Color(0xFF00FFA3)),
                                     )
-                                    Spacer(modifier = Modifier.width(4.5.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
                                 } else {
                                     Icon(
                                         Icons.Rounded.WifiTethering,
@@ -309,62 +355,15 @@ fun FrostedTopBar(
                                         tint = Color(0xFF00D9FF),
                                         modifier = Modifier.size(13.dp),
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Spacer(modifier = Modifier.width(3.5.dp))
                                 }
                                 Text(
-                                    text = if (isRoomActive) "Live Sync" else "Together",
+                                    text = if (isRoomActive) "Live" else "Together",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.5.sp,
                                     ),
                                     color = Color.White,
-                                )
-                            }
-                        }
-                    }
-                    if (onLeaderboardClick != null) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        val rewardProfile by VibeRewardsManager.profile.collectAsStateWithLifecycle()
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(
-                                            Color(0xFFFF7675).copy(alpha = 0.35f),
-                                            Color(0xFFFFB300).copy(alpha = 0.20f),
-                                        )
-                                    )
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    brush = Brush.linearGradient(
-                                        listOf(
-                                            Color(0xFFFF7675).copy(alpha = 0.8f),
-                                            Color(0xFFFFB300).copy(alpha = 0.8f),
-                                        )
-                                    ),
-                                    shape = RoundedCornerShape(16.dp),
-                                )
-                                .clickable { onLeaderboardClick() }
-                                .padding(horizontal = 8.dp, vertical = 4.5.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Rounded.LocalFireDepartment,
-                                    contentDescription = "Daily Streak",
-                                    tint = Color(0xFFFF7675),
-                                    modifier = Modifier.size(13.5.dp),
-                                )
-                                Spacer(modifier = Modifier.width(3.5.dp))
-                                Text(
-                                    text = "${rewardProfile.streakDays}",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.ExtraBold,
-                                        fontSize = 11.5.sp,
-                                    ),
-                                    color = Color(0xFFFFD700),
                                 )
                             }
                         }

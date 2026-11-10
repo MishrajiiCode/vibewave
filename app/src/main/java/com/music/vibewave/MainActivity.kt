@@ -222,6 +222,7 @@ import com.music.vibewave.ui.screens.ListenTogetherSheet
 import com.music.vibewave.ui.screens.LeaderboardSheet
 import com.music.vibewave.data.gamification.VibeRewardsManager
 import com.music.vibewave.ui.screens.CommunitySheet
+import com.music.vibewave.ui.components.EngagementCelebrationDialog
 import java.util.Locale
 
 /** A full first screen of a native YouTube Music radio before AutoPlay tops it up. */
@@ -551,6 +552,7 @@ private fun VibeWaveApp(
     var showCommunitySheet by remember { mutableStateOf(false) }
     var showListenTogetherSheet by remember { mutableStateOf(false) }
     var showLeaderboardSheet by remember { mutableStateOf(false) }
+    var activeCelebration by remember { mutableStateOf<VibeRewardsManager.CelebrationEvent?>(null) }
     val updateAvailable by viewModel.updateAvailable.collectAsStateWithLifecycle()
 
     /**
@@ -581,22 +583,8 @@ private fun VibeWaveApp(
     }
 
     LaunchedEffect(Unit) {
-        VibeRewardsManager.levelUpEvent.collect { (lvl, title) ->
-            android.widget.Toast.makeText(
-                context,
-                "🎉 LEVEL UP! You reached Level $lvl: $title ⚡",
-                android.widget.Toast.LENGTH_LONG,
-            ).show()
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        VibeRewardsManager.badgeUnlockedEvent.collect { badge ->
-            android.widget.Toast.makeText(
-                context,
-                "🏆 Achievement Unlocked: ${badge.iconEmoji} ${badge.title} (+${badge.xpReward} XP)",
-                android.widget.Toast.LENGTH_LONG,
-            ).show()
+        VibeRewardsManager.celebrationEvent.collect { celebration ->
+            activeCelebration = celebration
         }
     }
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -3184,6 +3172,17 @@ private fun VibeWaveApp(
             BackHandler { showLeaderboardSheet = false }
             LeaderboardSheet(
                 onDismiss = { showLeaderboardSheet = false },
+            )
+        }
+
+        activeCelebration?.let { celebration ->
+            EngagementCelebrationDialog(
+                event = celebration,
+                onDismiss = { activeCelebration = null },
+                onOpenHub = {
+                    activeCelebration = null
+                    showCommunitySheet = true
+                },
             )
         }
 

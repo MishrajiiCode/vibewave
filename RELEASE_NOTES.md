@@ -1,53 +1,39 @@
-# 🚀 VibeWave v2.0.4 — Daily Streaks, Vibe XP & Weekly Community Leaderboard
+# 🚀 VibeWave v2.0.5 — Engagement Center, Replay-Integrated XP & Trophy Celebrations
 
-Welcome to **VibeWave v2.0.4**! This release turns VibeWave into an engaging, gamified musical journey with **top-bar daily listening streaks**, **Vibe XP & leveling progression**, an **achievement trophy case**, and real-time **weekly community leaderboards**.
-
----
-
-### 🔥 Top Bar Daily Streak
-- **Animated Flame Counter**: Track your daily listening streak directly in the frosted top bar (`🔥 1`, `🔥 7`, etc.) right next to the brand logo.
-- **1-Tap Leaderboard Access**: Tap the flame streak pill to immediately open your complete level overview, weekly standings, and unlockable trophies.
-- **Daily Streak XP Bonuses**: Earn +50 bonus XP every consecutive day you listen to music.
+Welcome to **VibeWave v2.0.5**! This release elevates community engagement, reorganizes the top bar so daily streaks are front-and-center, introduces radiant celebration popups for unlocked tiers and trophies, integrates your Replay listening minutes directly into leaderboard standings, and transforms the community page into the full **Engagement Center & Vibe Hub**.
 
 ---
 
-### ⚡ Gamified Vibe XP & Leveling Engine
-- **Earn XP Automatically**:
-  - **+10 XP** for each song played.
-  - **+15 XP** for listening through to the end of a track.
-  - **+30 XP** for jumping into a *Listen Together* room.
-  - **+50 XP** for daily streaks.
-- **25 Progression Levels**:
-  - Lv 1–2: 🎵 **Acoustic Novice**
-  - Lv 3–4: 🎧 **Sound Explorer**
-  - Lv 5–7: ⚡ **Rhythm Rider**
-  - Lv 8–10: 🌊 **Vibe Master**
-  - Lv 11–15: 🔮 **Sonic Alchemist**
-  - Lv 16–20: 👑 **Harmony Legend**
-  - Lv 21+: 🌌 **Cosmic Audiophile**
+### 🔥 Top Bar Rearrangement: Streak Front-and-Center
+- **Replaced "VibeWave" Text with Daily Streak**: The brand text was removed to give maximum breathing room to your daily listening streak (`🔥 1`, `🔥 7`, etc.) right next to the logo.
+- **Never Hidden or Overflowing**: Compact and responsive layout guarantees the streak pill is 100% visible on any screen width alongside the Engagement Hub pill and Together sync button.
+- **1-Tap Access**: Tap the flame streak badge to open your full Rewards & Weekly Leaderboard.
 
 ---
 
-### 🏆 Weekly Community Leaderboard
-- **Weekly Fresh Competition**: Weekly chart resets every Monday at 00:00 so everyone has an equal shot at reaching #1!
-- **Podium Showcase**: 🥇 Gold, 🥈 Silver, and 🥉 Bronze podiums highlighting the top listeners in the community.
-- **Personal Rank Card**: Pinned view highlighting your rank, weekly score, and distance to next rank.
+### 🌟 Engagement Center & Vibe Hub (Revamped Community)
+- **Live Pulse Feed**: Shows all community song reviews alongside **real-time user achievement & tier unlock announcements** across all listeners!
+- **👏 Congratulate Button (+5 XP)**: When a fellow listener unlocks a trophy or hits a high streak, tap to cheer them on! Both of you receive bonus Vibe XP.
+- **🎯 Daily Missions & Quests**: Interactive daily challenges (Daily Tune, Rhythm Groove, Flame Keeper) with real-time progress and claimable XP rewards.
+- **Integrated Leaderboard & WhatsApp-Style Chat**: Seamless 3-tab navigation between Live Pulse, Leaderboards, and Direct Viber Messaging.
 
 ---
 
-### 🎖️ Unlockable Achievement Trophy Case
-- 🌟 **First Note**: Play your first track.
-- 🔥 **Week on Fire**: Maintain a 7-day daily listening streak.
-- 🌙 **Night Owl**: Listen between midnight and 4:00 AM.
-- 🤝 **Better Together**: Jam in a live Listen Together room.
-- 🎛️ **Pure Acoustic**: Tune your audio using the 10-band equalizer.
-- 🚀 **Music Marathoner**: Play over 100 complete songs.
+### 🎧 Replay-Integrated Listening XP & Leaderboards
+- **Real Playback Minutes & Track Counts**: Connected directly to the playback recorder. Every minute of music listened grants +5 XP, while full track completions grant +15 XP.
+- **Transparent Leaderboard Stats**: Every user's leaderboard card now proudly showcases:
+  - `🎧 X mins listened`
+  - `🎵 Y songs played`
+  - `🔥 Z-day streak`
+  - `✨ Weekly Vibe XP`
+
+---
+
+### 🎉 Radiant Celebration Popups
+- **Animated Modal Dialog**: Whenever you ascend to a new tier (Level 1–25) or unlock a trophy/milestone, a radiant modal dialog pops up celebrating your achievement with glowing animations, XP bonus chips, and automatic broadcast to the community feed.
 
 ---
 
 ### 📲 1-Tap Seamless In-App Updates
-- Open VibeWave to receive the in-app update prompt and install v2.0.4 directly in seconds.
-- Signed with the official production certificate (`vibewave-release.jks`) for smooth in-place installation.
-
----
-*Crafted with ❤️ by [Raj Mishra](https://github.com/MishrajiiCode)*
+- Open VibeWave to receive the in-app update prompt and install v2.0.5 directly in seconds.
+- Signed with the official production certificate (`vibewave-release.jks`) for smooth in-place updates.

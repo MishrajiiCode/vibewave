@@ -1,6 +1,7 @@
 package com.music.vibewave.data.stats
 
 import com.music.vibewave.data.YtMusicRepository
+import com.music.vibewave.data.gamification.VibeRewardsManager
 import com.music.vibewave.data.model.Song
 import com.music.vibewave.data.model.durationMillis
 import kotlinx.coroutines.CoroutineScope
@@ -82,7 +83,9 @@ object ListeningRecorder {
         val counts = !playCounted && playedThisTrack >= threshold
         if (counts) playCounted = true
 
-        ListeningStats.record(enriched(song), step, counts)
+        val enrichedSong = enriched(song)
+        ListeningStats.record(enrichedSong, step, counts)
+        runCatching { VibeRewardsManager.onListeningSample(step, counts, enrichedSong) }
 
         if (++samplesSinceFlush >= FLUSH_EVERY) {
             samplesSinceFlush = 0
