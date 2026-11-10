@@ -397,6 +397,7 @@ private fun VibeWaveApp(
     var showOnboardingDialog by remember { mutableStateOf(!isUserRegistered && !hasSkippedOnboarding) }
     var showAiPicker by remember { mutableStateOf(false) }
     var showAiPromptStudio by remember { mutableStateOf(false) }
+    var showAiChatSheet by remember { mutableStateOf(false) }
     var showEqualizerSheet by remember { mutableStateOf(false) }
     var showAdminDashboard by remember { mutableStateOf(false) }
     var showAboutDeveloper by remember { mutableStateOf(false) }
@@ -2203,8 +2204,8 @@ private fun VibeWaveApp(
                             onLoadMore = viewModel::loadMoreHome,
                             loadingMore = homeLoadingMore,
                             recentlyPlayedLoading = homeRecentlyPlayedLoading,
-                            onAiPickerClick = { showAiPicker = true },
-                            onAiPromptStudioClick = { showAiPromptStudio = true },
+                            onAiPickerClick = { showAiChatSheet = true },
+                            onAiPromptStudioClick = { showAiChatSheet = true },
                         )
                         TAB_EXPLORE -> selectedMoodGenre?.let { category ->
                             MoodGenrePlaylistsScreen(
@@ -2387,6 +2388,7 @@ private fun VibeWaveApp(
                     onCommunityClick = { showCommunitySheet = true },
                     onListenTogetherClick = { showListenTogetherSheet = true },
                     onLeaderboardClick = { showLeaderboardSheet = true },
+                    onAiChatClick = { showAiChatSheet = true },
                     onBack = when {
                         showDiscord -> ({ showDiscord = false })
                         showHistory -> ({ showHistory = false })
@@ -3329,6 +3331,15 @@ private fun VibeWaveApp(
         if (showOnboardingDialog && !isUserRegistered) {
             com.music.vibewave.ui.screens.UserOnboardingDialog(
                 onDismiss = { showOnboardingDialog = false },
+            )
+        }
+
+        if (showAiChatSheet) {
+            BackHandler { showAiChatSheet = false }
+            com.music.vibewave.ui.screens.VibeWaveAiChatSheet(
+                onDismissRequest = { showAiChatSheet = false },
+                onPlaySong = { song -> play(listOf(song), 0) },
+                onPlayQueue = { queue -> play(queue, 0) },
             )
         }
 

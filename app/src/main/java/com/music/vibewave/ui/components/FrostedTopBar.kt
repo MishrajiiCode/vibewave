@@ -37,6 +37,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.WifiTethering
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import com.music.vibewave.data.firebase.ListenTogetherManager
 import com.music.vibewave.data.gamification.VibeRewardsManager
@@ -139,6 +140,7 @@ fun FrostedTopBar(
     onCommunityClick: (() -> Unit)? = null,
     onListenTogetherClick: (() -> Unit)? = null,
     onLeaderboardClick: (() -> Unit)? = null,
+    onAiChatClick: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {},
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -384,6 +386,20 @@ fun FrostedTopBar(
                     .padding(end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (onAiChatClick != null) {
+                    IconButton(
+                        onClick = onAiChatClick,
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.AutoAwesome,
+                            contentDescription = "VibeWave AI Companion",
+                            tint = Color(0xFF00CEC9),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(2.dp))
+                }
                 actions()
             }
         }

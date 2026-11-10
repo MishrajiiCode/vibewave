@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.runtime.Composable
@@ -46,6 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -121,12 +123,54 @@ fun HomeScreen(
             contentPadding = contentPadding,
         ) {
             item {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(horizontal = PAGE_GUTTER, vertical = 8.dp),
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = PAGE_GUTTER, end = PAGE_GUTTER, top = 8.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.displayLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+
+                    if (onAiPickerClick != null) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color(0xFF16182B),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                Brush.linearGradient(
+                                    listOf(Color(0xFF6C5CE7), Color(0xFF00CEC9), Color(0xFFFF7675))
+                                )
+                            ),
+                            modifier = Modifier.clickable { onAiPickerClick() },
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.AutoAwesome,
+                                    contentDescription = "Ask AI",
+                                    tint = Color(0xFF00CEC9),
+                                    modifier = Modifier.size(15.dp),
+                                )
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Text(
+                                    text = "Ask AI ✨",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.5.sp,
+                                    ),
+                                    color = Color.White,
+                                )
+                            }
+                        }
+                    }
+                }
             }
             if (onAiPickerClick != null) {
                 item {
