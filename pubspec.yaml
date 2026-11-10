@@ -1,7 +1,7 @@
 name: vibewave
 description: "VibeWave 2.0 - Premium Music Streaming App with YouTube Integration, Firebase, AI Recommendations, Listen Together & Equalizer"
 publish_to: "none"
-version: 2.0.0+2
+version: 2.0.0+25
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

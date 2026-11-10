@@ -50,9 +50,23 @@ android {
         multiDexEnabled true
     }
 
+    signingConfigs {
+        release {
+            def keystoreFile = file("../vibewave-release.jks")
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword "vibewave2026"
+                keyAlias "vibewave"
+                keyPassword "vibewave2026"
+            } else {
+                signingConfig signingConfigs.debug
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled false
             shrinkResources false
         }
